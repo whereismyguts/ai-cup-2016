@@ -11,6 +11,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         Wizard fave;
 
+        Vector target;
+
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
 
@@ -27,51 +29,62 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 StrafeFrom(bullet);
                 return;
             }
-            Unit danger = CheckForDanger();
-            if(danger != null) {
-                RunFrom(danger);
-                return;
+            //Unit danger = CheckForDanger();
+            //if(danger != null) {
+            //    RunFrom(danger);
+            //    return;
+            //}
+
+
+            //LivingUnit enemies = GetCloseEnemy(); // nearest, weakest
+            //if(enemy != null)
+            //    Kick();
+            //else {
+            //    enemy = NearWeakEnemy(); // weakest in priority
+
+            //    if(enemy != null) {
+            //        if(CanShoot(enemy))
+            //            Shoot(enemy);
+            //        else
+            //            GetCloseToEnemy(enemy);
+            //    }
+            //}
+
+            //Bonus bonus = FindBestBonus(); // shields and power
+            //if(bonus!=null && bonus.Type != BonusType.Haste) {
+            //    RunTo(bonus);
+            //    return;
+            //}
+
+            //fave = UpdateFavoriteWizard();
+            //if(fave != null) {
+            //    CorrectPosition();
+            //    return;
+            //}
+
+            //if(bonus != null)
+            //    GoTo(bonus);
+            //else
+                GoAmongTheLane();
+
+
+
+
+
+            if(target != null) {
+                move.Turn = self.GetAngleTo(target.X, target.Y);
+                move.Speed = game.WizardForwardSpeed;
+                move.StrafeSpeed = 0;
             }
-
-
-            LivingUnit enemies = GetCloseEnemy(); // nearest, weakest
-            if(enemy != null)
-                Kick();
-            else {
-                enemy = NearWeakEnemy(); // weakest in priority
-
-                if(enemy != null) {
-                    if(CanShoot(enemy))
-                        Shoot(enemy);
-                    else
-                        GetCloseToEnemy(enemy);
-                }
-            }
-
-            Bonus bonus = FindBestBonus(); // shields and power
-            if(bonus!=null && bonus.Type != BonusType.Haste) {
-                RunTo(bonus);
-                return;
-            }
-
-            fave = UpdateFavoriteWizard();
-            if(fave != null) {
-                CorrectPosition();
-                return;
-            }
-
-            if(bonus != null)
-                GoTo(bonus);
-            else GoAmongTheLane();
-           
-
-
-
 
             //move.Speed = game.WizardForwardSpeed;
             //move.StrafeSpeed = game.WizardStrafeSpeed;
             //move.Turn = game.WizardMaxTurnAngle;
             //move.Action = ActionType.MagicMissile;
+        }
+
+        private void GoAmongTheLane() {
+            target = new Vector(world.Width / 2, world.Height / 2);
         }
 
         private void StrafeFrom(Unit obj) {
