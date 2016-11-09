@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
-    public sealed class MyStrategy : IStrategy {
+    public sealed class MyStrategy: IStrategy {
 
         Wizard me;
         World world;
@@ -44,7 +44,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     return;
                 }
                 else
-
                 if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange) {
                     ChaseGoal(true, archEnemy.X, archEnemy.Y);
                     return;
@@ -64,28 +63,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
 
 
-            Unit fave = null;
-            //double dist = double.MaxValue;
-            double maxrate = double.MinValue;
-            foreach(var w in world.Wizards) {
-                if(w.Faction != me.Faction || w.IsMe)
-                    continue;
-                //  double curD = me.GetDistanceTo(w.X, w.Y);
+            //Unit fave = GetTopRatedWizard();
 
-                double rate = GetPlayerScore(w.OwnerPlayerId);
-
-
-                if(rate > maxrate) {
-                    maxrate = rate;
-                    fave = w;
-                }
-
-                //if(curD < dist) {
-                //    dist = curD;
-                //    fave = w;
-                //}
-            }
-
+            Unit fave = GetCloseWizard();
 
             if(fave == null) {
                 double dist = double.MaxValue;
@@ -124,6 +104,41 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //else
 
 
+        }
+
+        Unit GetTopRatedWizard() {
+            Unit result = null;
+            double maxrate = double.MinValue;
+            foreach(var w in world.Wizards) {
+                if(w.Faction != me.Faction || w.IsMe)
+                    continue;
+                if(me.GetDistanceTo(w.X, w.Y) > me.VisionRange)
+                    continue;
+
+                double rate = GetPlayerScore(w.OwnerPlayerId);
+
+
+                if(rate > maxrate) {
+                    maxrate = rate;
+                    result = w;
+                }
+            }
+            return result;
+        }
+
+        Unit GetCloseWizard() {
+            double dist = double.MaxValue;
+            Unit result = null;
+            foreach(var w in world.Wizards) {
+                if(w.Faction != me.Faction || w.IsMe)
+                    continue;
+                double curD = me.GetDistanceTo(w.X, w.Y);
+                if(curD < dist) {
+                    dist = curD;
+                    result = w;
+                }
+            }
+            return result;
         }
 
         private double GetPlayerScore(long id) {
