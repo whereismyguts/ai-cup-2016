@@ -11,7 +11,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         Game game;
         Move move;
 
-
+        int strafe = 0;
+        int strafeSpeed = 1;
 
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
@@ -56,12 +57,24 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 }
                 else {
                     move.Action = ActionType.MagicMissile;
+                    if(strafe == 40) {
+                        strafeSpeed = -1;
+                    }
+                    if(strafe == -40) {
+                        strafeSpeed = 1;
+                    }
+
+
+                        move.StrafeSpeed = strafeSpeed*30;
+                        strafe+=strafeSpeed;
+                    
+                    
                     move.Speed = 0;
                     return;
                 }
 
             }
-
+            strafe = 0;
 
             //Unit fave = GetTopRatedWizard();
 
@@ -95,7 +108,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             if(fave != null) {
-                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
+                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0,90);
                 ChaseGoal(true, goal.X, goal.Y);
             }
 
@@ -129,8 +142,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         Unit GetCloseWizard() {
             double dist = double.MaxValue;
             Unit result = null;
-            foreach(var w in world.Wizards) {
-                if(w.Faction != me.Faction || w.IsMe)
+            List<LivingUnit> list = new List<LivingUnit>();
+            list.AddRange(world.Minions);
+            list.AddRange(world.Wizards);
+            foreach(var w in list) {
+                if(w.Faction != me.Faction|| w.Id==me.Id)
                     continue;
                 double curD = me.GetDistanceTo(w.X, w.Y);
                 if(curD < dist) {
@@ -161,11 +177,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             foreach(var en in enemies) {
                 double HPfactor = 8.0 - (double)en.Life / en.MaxLife;
                 var dist = en.GetDistanceTo(me);
-                double distFactor = dist >= me.CastRange ? 0 : dist >= en.Radius + me.Radius ? 1 : 0.5;
+                double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 1 : 0.5;
                 double typeFactor = GetTypeFactor(en);
 
                 double value = (HPfactor + typeFactor + distFactor) / 3.0;
-                if(value > bestValue) {
+                if(value > bestValue && value>0) {
                     bestValue = value;
                     result = en;
                 }
@@ -195,6 +211,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             move.Turn = me.GetAngleTo(x, y);
             move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
 
+            if(!fwd) move.Action = ActionType.MagicMissile;
 
             WalkAroundIfNeed();
         }
@@ -214,8 +231,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 double closeDist = me.Radius + obj.Radius + 10;
                 if(obj.GetDistanceTo(me.X, me.Y) <= closeDist) {
 
-                    move.Turn = -me.GetAngleTo(obj.X, obj.Y);
-                    move.Speed = game.WizardForwardSpeed;
+                    double angle = me.GetAngleTo(obj.X, obj.Y);
+
+                    move.Speed = Math.Sin(angle) * game.WizardForwardSpeed;
+                    move.StrafeSpeed = Math.Cos(angle) * game.WizardStrafeSpeed;
+
+                    //move.Turn = -me.GetAngleTo(obj.X, obj.Y);
+                    //move.Speed = 0;
                     return;
                 }
 
