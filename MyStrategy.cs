@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
-    public sealed class MyStrategy: IStrategy {
+    public sealed class MyStrategy : IStrategy {
 
         Wizard me;
         World world;
@@ -34,7 +34,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             LivingUnit archEnemy = FindArchEnemy();
 
-            
+
 
             if(archEnemy != null) {
 
@@ -65,17 +65,30 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             Unit fave = null;
-            double dist = double.MaxValue;
+            //double dist = double.MaxValue;
+            double maxrate = double.MinValue;
             foreach(var w in world.Wizards) {
                 if(w.Faction != me.Faction || w.IsMe)
                     continue;
-                double curD = me.GetDistanceTo(w.X, w.Y);
-                if(curD < dist) {
-                    dist = curD;
+                //  double curD = me.GetDistanceTo(w.X, w.Y);
+
+                double rate = GetPlayerScore(w.OwnerPlayerId);
+
+
+                if(rate > maxrate) {
+                    maxrate = rate;
                     fave = w;
                 }
+
+                //if(curD < dist) {
+                //    dist = curD;
+                //    fave = w;
+                //}
             }
-            if(fave == null)
+
+
+            if(fave == null) {
+                double dist = double.MaxValue;
                 foreach(var m in world.Minions) {
                     if(m.Faction != me.Faction)
                         continue;
@@ -85,6 +98,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                         fave = m;
                     }
                 }
+            }
 
 
 
@@ -101,7 +115,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             if(fave != null) {
-                Vector goal =  CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
+                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
                 ChaseGoal(true, goal.X, goal.Y);
             }
 
@@ -109,7 +123,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    GoTo(bonus);
             //else
 
-            
+
+        }
+
+        private double GetPlayerScore(long id) {
+            Player player = world.Players.First(p => p.Id == id);
+
+            return player != null ? player.Score : 0;
         }
 
         private LivingUnit FindArchEnemy() {
@@ -121,10 +141,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             var enemies = enemiesList.Where(en => (en.Faction != me.Faction && en.Faction != Faction.Neutral));
 
             // now just find enimy with max value
-            double bestValue = double.MaxValue;
+            double bestValue = double.MinValue;
             LivingUnit result = null;
             foreach(var en in enemies) {
-                double HPfactor = 1.0 - en.Life / en.MaxLife;
+                double HPfactor = 8.0 - (double)en.Life / en.MaxLife;
                 var dist = en.GetDistanceTo(me);
                 double distFactor = dist >= me.CastRange ? 0 : dist >= en.Radius + me.Radius ? 1 : 0.5;
                 double typeFactor = GetTypeFactor(en);
@@ -143,7 +163,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(en is Wizard) return 1;
 
             if(en is Building) {
-               if( (en as Building).Type == BuildingType.FactionBase) return 0.8;
+                if((en as Building).Type == BuildingType.FactionBase) return 0.8;
                 if((en as Building).Type == BuildingType.GuardianTower) return 0.6;
             }
 
@@ -156,37 +176,35 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         void ChaseGoal(bool fwd, double x, double y) {
-         
-                move.Turn = me.GetAngleTo(x, x);
-                move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
-         
+
+            move.Turn = me.GetAngleTo(x, y);
+            move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
+
 
             WalkAroundIfNeed();
         }
 
 
-        List<CircularUnit> blocks = new List<CircularUnit>();
+
         private void WalkAroundIfNeed() {
-            if(blocks.Count == 0) {
-                blocks.AddRange(world.Buildings);
-                blocks.AddRange(world.Trees);
-                blocks.AddRange(world.Minions);
-                blocks.AddRange(world.Wizards);
-            }
+            List<CircularUnit> blocks = new List<CircularUnit>();
+            blocks.AddRange(world.Buildings);
+            //  blocks.AddRange(world.Trees);
+            blocks.AddRange(world.Minions);
+            blocks.AddRange(world.Wizards);
 
             foreach(var obj in blocks) {
                 if(obj.Id == me.Id)
                     continue;
-                double closeDist = me.Radius + obj.Radius+5;
+                double closeDist = me.Radius + obj.Radius + 10;
                 if(obj.GetDistanceTo(me.X, me.Y) <= closeDist) {
 
                     move.Turn = -me.GetAngleTo(obj.X, obj.Y);
                     move.Speed = game.WizardForwardSpeed;
                     return;
                 }
-                else {
-                    move.Speed--;
-                }
+
+
             }
         }
 
