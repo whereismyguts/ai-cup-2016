@@ -4,14 +4,14 @@ using System.Linq;
 using System.Collections.Generic;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
-    public sealed class MyStrategy : IStrategy {
+    public sealed class MyStrategy: IStrategy {
 
         Wizard me;
         World world;
         Game game;
         Move move;
 
-        Unit fave;
+
 
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
@@ -29,65 +29,43 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-            //Unit danger = CheckForDanger();
-            //if(danger != null) {
-            //    RunFrom(danger);
-            //    return;
-            //}
 
 
-            //LivingUnit enemies = GetCloseEnemy(); // nearest, weakest
-            //if(enemy != null)
-            //    Kick();
-            //else {
-            //    enemy = NearWeakEnemy(); // weakest in priority
 
-            //    if(enemy != null) {
-            //        if(CanShoot(enemy))
-            //            Shoot(enemy);
-            //        else
-            //            GetCloseToEnemy(enemy);
-            //    }
-            //}
+            LivingUnit archEnemy = FindArchEnemy();
 
-            //Bonus bonus = FindBestBonus(); // shields and power
-            //if(bonus!=null && bonus.Type != BonusType.Haste) {
-            //    RunTo(bonus);
-            //    return;
-            //}
+            
 
-            //            fave = UpdateFavoriteWizard();
+            if(archEnemy != null) {
 
-
-            if(me.Life < me.MaxLife * 0.3) {
-                goal = me.Faction == Faction.Academy ? new Vector(0, world.Height) : new Vector(world.Width, 0);
-            }
-
-            List<LivingUnit> enemiesList = new List<LivingUnit>();
-            enemiesList.AddRange( world.Minions);
-            enemiesList.AddRange(world.Wizards);
-            enemiesList.AddRange(world.Buildings);
-
-                foreach(var en in enemiesList) {
-    
-                    if(en.Faction != me.Faction && en.Faction!=  Faction.Neutral) {
-                    if(me.GetDistanceTo(en) < me.CastRange*0.95)
-                        if(Math.Abs(me.GetAngleTo(en)) > 0.01) {
-                            move.Turn = me.GetAngleTo(en);
-                            move.Speed = 0;
-                            return;
-                        }
-                        else {
-                            move.Action = ActionType.MagicMissile;
-                            move.Speed = -0.5;
-                            return;
-                        }
+                if(me.Life < me.MaxLife * 0.5) {
+                    ChaseGoal(false, archEnemy.X, archEnemy.Y);
+                    move.Action = ActionType.Staff;
+                    return;
                 }
+                else
+
+                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange) {
+                    ChaseGoal(true, archEnemy.X, archEnemy.Y);
+                    return;
+                }
+                else
+                if(Math.Abs(me.GetAngleTo(archEnemy)) > 0.01) {
+                    move.Turn = me.GetAngleTo(archEnemy);
+                    move.Speed = 0;
+                    return;
+                }
+                else {
+                    move.Action = ActionType.MagicMissile;
+                    move.Speed = 0;
+                    return;
+                }
+
             }
 
 
-
-                    double dist = 10000.0;
+            Unit fave = null;
+            double dist = double.MaxValue;
             foreach(var w in world.Wizards) {
                 if(w.Faction != me.Faction || w.IsMe)
                     continue;
@@ -97,40 +75,110 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     fave = w;
                 }
             }
-            if(fave==null)
-            foreach(var m in world.Minions) {
-                if(m.Faction != me.Faction)
-                    continue;
-                double curD = me.GetDistanceTo(m.X, m.Y);
-                if(curD < dist) {
-                    dist = curD;
-                    fave = m;
+            if(fave == null)
+                foreach(var m in world.Minions) {
+                    if(m.Faction != me.Faction)
+                        continue;
+                    double curD = me.GetDistanceTo(m.X, m.Y);
+                    if(curD < dist) {
+                        dist = curD;
+                        fave = m;
+                    }
                 }
+
+
+
+            //foreach(var en in enemiesList)
+            //    if(en.Faction != me.Faction)
+            //        if(me.GetDistanceTo(en) < me.Radius + en.Radius + 10) {
+            //            move.Turn = me.GetAngleTo(en);
+            //            move.Action = ActionType.Staff;
+            //            return;
+            //        }
+
+
+
+
+
+            if(fave != null) {
+                Vector goal =  CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
+                ChaseGoal(true, goal.X, goal.Y);
             }
 
+            //if(bonus != null)
+            //    GoTo(bonus);
+            //else
 
+            
+        }
 
-            foreach(var en in enemiesList)
-                if(en.Faction != me.Faction ) 
-                    if(me.GetDistanceTo(en) < me.Radius + en.Radius + 10) 
-                    {
-                    move.Turn = me.GetAngleTo(en);
-                    move.Action = ActionType.Staff;
-                    return;
+        private LivingUnit FindArchEnemy() {
+            List<LivingUnit> enemiesList = new List<LivingUnit>();
+            enemiesList.AddRange(world.Minions);
+            enemiesList.AddRange(world.Wizards);
+            enemiesList.AddRange(world.Buildings);
+
+            var enemies = enemiesList.Where(en => (en.Faction != me.Faction && en.Faction != Faction.Neutral));
+
+            // now just find enimy with max value
+            double bestValue = double.MaxValue;
+            LivingUnit result = null;
+            foreach(var en in enemies) {
+                double HPfactor = 1.0 - en.Life / en.MaxLife;
+                var dist = en.GetDistanceTo(me);
+                double distFactor = dist >= me.CastRange ? 0 : dist >= en.Radius + me.Radius ? 1 : 0.5;
+                double typeFactor = GetTypeFactor(en);
+
+                double value = (HPfactor + typeFactor + distFactor) / 3.0;
+                if(value > bestValue) {
+                    bestValue = value;
+                    result = en;
                 }
+            }
+            return result;
+        }
+        double GetTypeFactor(LivingUnit en) {
+            if(en is Minion) return 0.3;
+
+            if(en is Wizard) return 1;
+
+            if(en is Building) {
+               if( (en as Building).Type == BuildingType.FactionBase) return 0.8;
+                if((en as Building).Type == BuildingType.GuardianTower) return 0.6;
+            }
+
+            return 0;
+        }
+
+        private Vector CalcFaveNearPoint(Unit goalUnit, double angleTo, double distTo) {
+            double angleTotal = goalUnit.Angle + angleTo;
+            return new Vector(goalUnit.X - Math.Cos(angleTotal) * distTo, goalUnit.Y - Math.Sin(angleTotal) * distTo);
+        }
+
+        void ChaseGoal(bool fwd, double x, double y) {
+         
+                move.Turn = me.GetAngleTo(x, x);
+                move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
+         
+
+            WalkAroundIfNeed();
+        }
 
 
-                List<CircularUnit> list = new List<CircularUnit>();
-            list.AddRange(world.Buildings);
-            list.AddRange(world.Trees);
-            list.AddRange(world.Minions);
-            list.AddRange(world.Wizards);
+        List<CircularUnit> blocks = new List<CircularUnit>();
+        private void WalkAroundIfNeed() {
+            if(blocks.Count == 0) {
+                blocks.AddRange(world.Buildings);
+                blocks.AddRange(world.Trees);
+                blocks.AddRange(world.Minions);
+                blocks.AddRange(world.Wizards);
+            }
 
-            foreach(var obj in list) {
+            foreach(var obj in blocks) {
                 if(obj.Id == me.Id)
                     continue;
-                double closeDist = me.Radius + obj.Radius;
-                if(obj.GetDistanceTo(me.X, me.Y) < closeDist + 10) {
+                double closeDist = me.Radius + obj.Radius+5;
+                if(obj.GetDistanceTo(me.X, me.Y) <= closeDist) {
 
                     move.Turn = -me.GetAngleTo(obj.X, obj.Y);
                     move.Speed = game.WizardForwardSpeed;
@@ -140,39 +188,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     move.Speed--;
                 }
             }
-
-            if(fave != null) {
-               
-                    goal = new Vector(fave.X - Math.Cos(fave.Angle+Math.PI/2.0)*100, fave.Y -Math.Sin(fave.Angle + Math.PI / 2.0) * 100);
-            }
-
-            //if(bonus != null)
-            //    GoTo(bonus);
-            //else
-
-
-
-
-
-
-
-            ChaseGoal();
-
-            //move.Speed = game.WizardForwardSpeed;
-            //move.StrafeSpeed = game.WizardStrafeSpeed;
-            //move.Turn = game.WizardMaxTurnAngle;
-            //move.Action = ActionType.MagicMissile;
         }
 
-        void ChaseGoal() {
-            if(goal != null) {
-                move.Turn = me.GetAngleTo(goal.X, goal.Y);
-                move.Speed = 300;
-
-            }
-        }
-
-        Vector goal;
+        //Vector goal;
 
         private void StrafeFrom(Unit obj) {
             var angle = me.GetAngleTo(obj.X, obj.Y);
