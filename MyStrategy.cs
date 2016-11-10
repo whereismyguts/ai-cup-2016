@@ -211,7 +211,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             blocks.AddRange(world.Minions);
             blocks.AddRange(world.Wizards);
 
-            foreach(var obj in blocks) {
+            foreach(CircularUnit obj in blocks) {
                 if(obj.Id == me.Id)
                     continue;
                 double closeDist = me.Radius + obj.Radius + 10;
