@@ -1,7 +1,8 @@
-using System;
+
 using Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model;
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     public sealed class MyStrategy: IStrategy {
@@ -11,8 +12,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         Game game;
         Move move;
 
-        int strafe = 0;
-        int strafeSpeed = 1;
+
+        static Grid grid;
 
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
@@ -30,7 +31,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-
+            if(grid == null)
+                grid = new Grid(world);
 
 
             LivingUnit archEnemy = FindArchEnemy();
@@ -108,7 +110,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             if(fave != null) {
-                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0,90);
+                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
                 ChaseGoal(true, goal.X, goal.Y);
             }
 
@@ -225,7 +227,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             blocks.AddRange(world.Minions);
             blocks.AddRange(world.Wizards);
 
-            foreach(var obj in blocks) {
+            foreach(CircularUnit obj in blocks) {
                 if(obj.Id == me.Id)
                     continue;
                 double closeDist = me.Radius + obj.Radius + 10;
@@ -271,7 +273,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return null;
         }
     }
-    public class Vector {
+    public struct Vector {
 
         public Vector(double x, double y) {
             this.X = x;
