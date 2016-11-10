@@ -12,8 +12,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         Game game;
         Move move;
 
-
-        static Grid grid;
+        int strafe = 0;
+        int strafeSpeed = 1;
+        //static Grid grid;
 
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
@@ -31,9 +32,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-            if(grid == null)
-                grid = new Grid(world);
-
+            //if(grid == null)
+            //    grid = new Grid(world);
+            //else
+            //grid.Reveal(world);
 
             LivingUnit archEnemy = FindArchEnemy();
 
@@ -41,9 +43,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             if(archEnemy != null) {
 
-                if(me.Life < me.MaxLife * 0.5) {
+                if(me.Life < me.MaxLife * 0.5 && me.GetDistanceTo(archEnemy.X, archEnemy.Y)<90) {
                     ChaseGoal(false, archEnemy.X, archEnemy.Y);
-                    move.Action = ActionType.Staff;
+                    move.Action = ActionType.MagicMissile;
+
                     return;
                 }
                 else
@@ -179,7 +182,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             foreach(var en in enemies) {
                 double HPfactor = 8.0 - (double)en.Life / en.MaxLife;
                 var dist = en.GetDistanceTo(me);
-                double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 1 : 0.5;
+                double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 1 : dist*100;
                 double typeFactor = GetTypeFactor(en);
 
                 double value = (HPfactor + typeFactor + distFactor) / 3.0;
@@ -223,7 +226,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         private void WalkAroundIfNeed() {
             List<CircularUnit> blocks = new List<CircularUnit>();
             blocks.AddRange(world.Buildings);
-            //  blocks.AddRange(world.Trees);
+            blocks.AddRange(world.Trees);
             blocks.AddRange(world.Minions);
             blocks.AddRange(world.Wizards);
 
@@ -235,9 +238,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
                     double angle = me.GetAngleTo(obj.X, obj.Y);
 
-                    move.Speed = Math.Sin(angle) * game.WizardForwardSpeed;
-                    move.StrafeSpeed = Math.Cos(angle) * game.WizardStrafeSpeed;
-
+                    move.Speed = - Math.Cos(angle) * 30;
+                    move.StrafeSpeed = -Math.Sin(angle) * 30;
+                    move.Turn = 0;
                     //move.Turn = -me.GetAngleTo(obj.X, obj.Y);
                     //move.Speed = 0;
                     return;

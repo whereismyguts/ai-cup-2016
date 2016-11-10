@@ -7,7 +7,7 @@ using System.Drawing.Imaging;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     public class Grid {
-        const double cellSize = 50;
+        const double cellSize = 10;
         const int skipCells = 1;
         Random rnd = new Random();
 
@@ -17,13 +17,23 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public Grid(World world) {
             Reveal(world);
         }
-
+        Bitmap bmp;
         public void  Reveal(World world) {
             var objects = new List<CircularUnit>();
             objects.AddRange(world.Buildings);
             objects.AddRange(world.Trees);
 
             CreateCells(objects);
+
+            bmp = new Bitmap(cells.Xmax, cells.Ymax);
+            Graphics g = Graphics.FromImage(bmp);
+
+            foreach(var c in cells.List) {
+                g.FillRectangle(Brushes.Red, c.X, c.Y, 1, 1);
+            }
+
+          //  bmp.Save("1.bmp", ImageFormat.Bmp);
+            //Process.Start("1.bmp");
         }
 
         public PointList GetPath(Point start, Point end) {
