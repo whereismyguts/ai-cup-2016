@@ -14,8 +14,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         int strafe = 0;
         int strafeSpeed = 1;
-        //static Grid grid;
-
+        static Grid grid;
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
 
@@ -25,6 +24,26 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.move = move;
             this.game = game;
 
+
+
+            //Path finding test:
+
+            if(grid == null)
+                grid = new Grid(world);
+            else
+                grid.Reveal(world);
+
+
+
+            foreach(Bonus item in world.Bonuses) {
+                List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
+            }
+
+
+
+            
+            //
+
             //move.Action = ActionType.Staff;
             // moving block
             //Projectile bullet = CheckProjectiles();
@@ -32,25 +51,21 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-            //if(grid == null)
-            //    grid = new Grid(world);
-            //else
-            //grid.Reveal(world);
+            
 
             LivingUnit archEnemy = FindArchEnemy();
 
 
 
             if(archEnemy != null) {
-
-                if(me.Life < me.MaxLife * 0.5 && me.GetDistanceTo(archEnemy.X, archEnemy.Y)<90) {
+                double distance = me.GetDistanceTo(archEnemy.X, archEnemy.Y);
+                if(me.Life < me.MaxLife * 0.5 || distance < 90) {
                     ChaseGoal(false, archEnemy.X, archEnemy.Y);
                     move.Action = ActionType.MagicMissile;
-
                     return;
                 }
                 else
-                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange) {
+                if(distance > me.CastRange) {
                     ChaseGoal(true, archEnemy.X, archEnemy.Y);
                     return;
                 }
@@ -61,20 +76,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     return;
                 }
                 else {
+                    move.Speed = 0;
                     move.Action = ActionType.MagicMissile;
-                    if(strafe == 40) {
+                    if(strafe == 30) {
                         strafeSpeed = -1;
                     }
-                    if(strafe == -40) {
+                    if(strafe == -30) {
                         strafeSpeed = 1;
                     }
-
-
-                        move.StrafeSpeed = strafeSpeed*30;
-                        strafe+=strafeSpeed;
+                    move.StrafeSpeed = strafeSpeed * game.WizardStrafeSpeed;
+                    strafe += strafeSpeed;
                     
-                    
-                    move.Speed = 0;
                     return;
                 }
 
@@ -99,28 +111,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
 
 
-
-            //foreach(var en in enemiesList)
-            //    if(en.Faction != me.Faction)
-            //        if(me.GetDistanceTo(en) < me.Radius + en.Radius + 10) {
-            //            move.Turn = me.GetAngleTo(en);
-            //            move.Action = ActionType.Staff;
-            //            return;
-            //        }
-
-
-
-
-
             if(fave != null) {
                 Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
                 ChaseGoal(true, goal.X, goal.Y);
             }
-
-            //if(bonus != null)
-            //    GoTo(bonus);
-            //else
-
 
         }
 
@@ -151,7 +145,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             list.AddRange(world.Minions);
             list.AddRange(world.Wizards);
             foreach(var w in list) {
-                if(w.Faction != me.Faction|| w.Id==me.Id)
+                if(w.Faction != me.Faction || w.Id == me.Id)
                     continue;
                 double curD = me.GetDistanceTo(w.X, w.Y);
                 if(curD < dist) {
@@ -182,11 +176,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             foreach(var en in enemies) {
                 double HPfactor = 8.0 - (double)en.Life / en.MaxLife;
                 var dist = en.GetDistanceTo(me);
-                double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 1 : dist*100;
+                double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 1 : dist * 100;
                 double typeFactor = GetTypeFactor(en);
 
                 double value = (HPfactor + typeFactor + distFactor) / 3.0;
-                if(value > bestValue && value>0) {
+                if(value > bestValue && value > 0) {
                     bestValue = value;
                     result = en;
                 }
@@ -238,7 +232,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
                     double angle = me.GetAngleTo(obj.X, obj.Y);
 
-                    move.Speed = - Math.Cos(angle) * 30;
+                    move.Speed = -Math.Cos(angle) * 30;
                     move.StrafeSpeed = -Math.Sin(angle) * 30;
                     move.Turn = 0;
                     //move.Turn = -me.GetAngleTo(obj.X, obj.Y);
@@ -264,17 +258,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 move.Turn = 3 * Math.PI / 2.0 - angle;
         }
 
-        Projectile CheckProjectiles() {
-            var projectiles = world.Projectiles;
-            foreach(var pr in projectiles) {
-                Vector prVec = new Vector(pr.SpeedX, pr.SpeedY);
-                Vector toMe = new Vector(me.X - pr.X, me.Y - pr.Y);
-                var angle = prVec.AngleTo(toMe);
-                if(angle < Math.Atan(me.Radius / me.GetDistanceTo(pr.X, pr.Y)))
-                    return pr;
-            }
-            return null;
-        }
+
     }
     public struct Vector {
 
@@ -286,12 +270,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public double X { get; set; }
         public double Y { get; set; }
 
-
-        public double AngleTo(Vector vector2) {
-            double sin = X * vector2.Y - vector2.X * Y;
-            double cos = X * vector2.X + Y * vector2.Y;
-
-            return Math.Atan2(sin, cos) * (180 / Math.PI);
-        }
+       
     }
 }
