@@ -1,7 +1,8 @@
-using System;
+
 using Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model;
 using System.Linq;
 using System.Collections.Generic;
+using System;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     public sealed class MyStrategy: IStrategy {
@@ -12,6 +13,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         Move move;
 
 
+        static Grid grid;
 
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
@@ -29,7 +31,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-
+            if(grid == null)
+                grid = new Grid(world);
 
 
             LivingUnit archEnemy = FindArchEnemy();
@@ -249,7 +252,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return null;
         }
     }
-    public class Vector {
+    public struct Vector {
 
         public Vector(double x, double y) {
             this.X = x;
