@@ -14,7 +14,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         int strafe = 0;
         int strafeSpeed = 1;
-        static Grid grid;
+        //static Grid grid;
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
 
@@ -28,20 +28,20 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             //Path finding test:
 
-            if(grid == null)
-                grid = new Grid(world);
-            else
-                grid.Reveal(world);
+            //if(grid == null)
+            //    grid = new Grid(world);
+            //else
+            //    grid.Reveal(world);
 
 
 
-            foreach(Bonus item in world.Bonuses) {
-                List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
-            }
+            //foreach(Bonus item in world.Bonuses) {
+            //    List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
+            //}
 
 
 
-            
+
             //
 
             //move.Action = ActionType.Staff;
@@ -51,21 +51,23 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //    StrafeFrom(bullet);
             //    return;
             //}
-            
-
-            LivingUnit archEnemy = FindArchEnemy();
 
 
+            //run if need
+            {
+                LivingUnit close = GetClosestEnemyUnit();
 
-            if(archEnemy != null) {
-                double distance = me.GetDistanceTo(archEnemy.X, archEnemy.Y);
-                if(me.Life < me.MaxLife * 0.5 || distance < 90) {
-                    ChaseGoal(false, archEnemy.X, archEnemy.Y);
+                if(close != null && (me.Life < me.MaxLife * 0.6 || me.GetDistanceTo(close.X, close.Y) < me.CastRange * 0.6)) {
+                    ChaseGoal(false, close.X, close.Y);
                     move.Action = ActionType.MagicMissile;
                     return;
                 }
-                else
-                if(distance > me.CastRange) {
+            }
+            //
+
+            LivingUnit archEnemy = FindArchEnemy();
+            if(archEnemy != null) {
+                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange) {
                     ChaseGoal(true, archEnemy.X, archEnemy.Y);
                     return;
                 }
@@ -86,7 +88,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     }
                     move.StrafeSpeed = strafeSpeed * game.WizardStrafeSpeed;
                     strafe += strafeSpeed;
-                    
+
                     return;
                 }
 
@@ -95,7 +97,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             //Unit fave = GetTopRatedWizard();
 
-            Unit fave = GetCloseWizard();
+            Unit fave = GetClosestEnemyUnit();
 
             if(fave == null) {
                 double dist = double.MaxValue;
@@ -112,7 +114,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             if(fave != null) {
-                Vector goal = CalcFaveNearPoint(fave, Math.PI / 2.0, 70);
+                Vector goal = CalcFaveNearPoint(fave, 0, 70);
                 ChaseGoal(true, goal.X, goal.Y);
             }
 
@@ -138,9 +140,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return result;
         }
 
-        Unit GetCloseWizard() {
+        LivingUnit GetClosestEnemyUnit() {
             double dist = double.MaxValue;
-            Unit result = null;
+            LivingUnit result = null;
             List<LivingUnit> list = new List<LivingUnit>();
             list.AddRange(world.Minions);
             list.AddRange(world.Wizards);
@@ -208,7 +210,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         void ChaseGoal(bool fwd, double x, double y) {
 
             move.Turn = me.GetAngleTo(x, y);
-            move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
+            move.Speed = fwd ? 30 : -30;
 
             if(!fwd) move.Action = ActionType.MagicMissile;
 
@@ -270,6 +272,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public double X { get; set; }
         public double Y { get; set; }
 
-       
+
     }
 }
