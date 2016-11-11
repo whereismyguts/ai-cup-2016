@@ -24,15 +24,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.move = move;
             this.game = game;
 
-            //Path finding test:
-            //if(grid == null)
-            //    grid = new Grid(world);
-            //else
-            //    grid.Reveal(world);
-            //foreach(Bonus item in world.Bonuses) {
-            //    List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
-            //}
-            //
+  
 
             //run
             LivingUnit runFrom = FindDanger();
@@ -55,7 +47,21 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
             //strafe = 0; ??
             //find what to do
+
+            //PerformRoute();
             FollowMinions();
+        }
+
+        private void PerformRoute() {
+            //Path finding test:
+            //if(grid == null)
+            //    grid = new Grid(world);
+            //else
+            //    grid.Reveal(world);
+            //foreach(Bonus item in world.Bonuses) {
+            //    List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
+            //}
+            //
         }
 
         private void FollowMinions() {
