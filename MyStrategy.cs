@@ -57,7 +57,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             {
                 LivingUnit close = GetClosestEnemyUnit();
 
-                if(close != null && (me.Life < me.MaxLife * 0.6 || me.GetDistanceTo(close.X, close.Y) < me.CastRange * 0.6)) {
+                if(close != null && (me.Life < me.MaxLife * 0.5 || me.GetDistanceTo(close.X, close.Y) < me.CastRange * 0.5)) {
                     ChaseGoal(false, close.X, close.Y);
                     move.Action = ActionType.MagicMissile;
                     return;
@@ -67,7 +67,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             LivingUnit archEnemy = FindArchEnemy();
             if(archEnemy != null) {
-                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange) {
+                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange*0.8) {
                     ChaseGoal(true, archEnemy.X, archEnemy.Y);
                     return;
                 }
@@ -97,7 +97,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             //Unit fave = GetTopRatedWizard();
 
-            Unit fave = GetClosestEnemyUnit();
+            Unit fave = null;// = GetClosestEnemyUnit();
 
             if(fave == null) {
                 double dist = double.MaxValue;
@@ -147,7 +147,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             list.AddRange(world.Minions);
             list.AddRange(world.Wizards);
             foreach(var w in list) {
-                if(w.Faction != me.Faction || w.Id == me.Id)
+                if(w.Faction == me.Faction || w.Faction == Faction.Neutral || w.Id == me.Id)
                     continue;
                 double curD = me.GetDistanceTo(w.X, w.Y);
                 if(curD < dist) {
@@ -234,8 +234,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
                     double angle = me.GetAngleTo(obj.X, obj.Y);
 
-                    move.Speed = -Math.Cos(angle) * 30;
-                    move.StrafeSpeed = -Math.Sin(angle) * 30;
+                        move.Speed = -Math.Cos(angle) * 3;
+                        move.StrafeSpeed = -Math.Sin(angle) * 3;
                     move.Turn = 0;
                     //move.Turn = -me.GetAngleTo(obj.X, obj.Y);
                     //move.Speed = 0;
