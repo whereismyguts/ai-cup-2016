@@ -14,10 +14,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         int strafe = 0;
         int strafeSpeed = 1;
-        //static Grid grid;
-        // get target: 
-        //correct distance to fave, go away, attack weak enemy, get bomus
-
         Vector home;
 
         public void Move(Wizard me, World world, Game game, Move move) {
@@ -27,8 +23,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.game = game;
             if(home.IsEmpty)
                 home = me.Faction == Faction.Academy ?
-                    CpWalker.points[0].Poisition :
-                    CpWalker.points[10].Poisition;
+                    CpWalker.points[1].Position :
+                    CpWalker.points[19].Position;
 
             //run
             LivingUnit runFrom = FindDanger();
@@ -64,27 +60,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             //FollowMinions();
         }
-
-        private void PerformRoute() {
-            //Path finding test:
-            //if(grid == null)
-            //    grid = new Grid(world);
-            //else
-            //    grid.Reveal(world);
-            //foreach(Bonus item in world.Bonuses) {
-            //    List<Vector> path =  grid.GetPath(new Point((int)me.X, (int)me.Y), new Point((int)item.X, (int)item.Y));
-            //}
-            //
-        }
-
-        private void FollowMinions() {
+        void FollowMinions() {
             LivingUnit fave = GetFave();
             if(fave != null) {
                 Vector goal = CalcFaveNearPoint(fave, 0, 100);
                 Goal(true, goal.X, goal.Y);
             }
         }
-
         void Attack(LivingUnit archEnemy) {
             if(Math.Abs(me.GetAngleTo(archEnemy)) > 0.01)
                 move.Turn = me.GetAngleTo(archEnemy);
@@ -104,15 +86,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             move.StrafeSpeed = strafeSpeed * game.WizardStrafeSpeed;
             strafe += strafeSpeed;
         }
-
-        private LivingUnit GetFave() {
+        LivingUnit GetFave() {
             try {
                 return world.Minions.OrderBy(m => m.GetDistanceTo(me)).Last();
             }
             catch { }
             return null;
         }
-
         LivingUnit FindDanger() {
             LivingUnit danger = GetClosestEnemyUnit();
             if(danger != null && (me.Life < me.MaxLife * 0.5 || me.GetDistanceTo(danger.X, danger.Y) < me.CastRange * 0.4))
@@ -134,7 +114,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             catch { }
             return null;
         }
-        private LivingUnit FindArchEnemy() {
+        LivingUnit FindArchEnemy() {
             List<LivingUnit> enemiesList = new List<LivingUnit>();
             enemiesList.AddRange(world.Minions);
             enemiesList.AddRange(world.Wizards);
@@ -175,17 +155,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             double angleTotal = goalUnit.Angle + angleTo;
             return new Vector(goalUnit.X - Math.Cos(angleTotal) * distTo, goalUnit.Y - Math.Sin(angleTotal) * distTo);
         }
-
         void Goal(bool fwd, double x, double y) {
             move.Turn = me.GetAngleTo(x, y);
             move.Speed = fwd ? 30 : -30;
             //if(!fwd) move.Action = ActionType.MagicMissile;
             WalkAroundIfNeed();
         }
-
-
-
-        private void WalkAroundIfNeed() {
+        void WalkAroundIfNeed() {
             List<CircularUnit> blocks = new List<CircularUnit>();
             blocks.AddRange(world.Buildings);
             blocks.AddRange(world.Trees);
@@ -206,7 +182,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
     }
     public struct Vector {
-
         public Vector(double x, double y) {
             this.X = x;
             this.Y = y;
@@ -226,8 +201,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
     }
-
-
     public static class CpWalker {
 
         public static CheckpointList points;
@@ -241,7 +214,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Vector end = new Vector(x1, y1);
             Vector start = new Vector(x0, y0);
 
-            var around = points.list.Where(p => p.Value.Poisition.DistanceTo(start) < Checkpoint.Radius).ToList();
+            var around = points.list.Where(p => p.Value.Position.DistanceTo(start) < Checkpoint.Radius).ToList();
             //in some point
             if(around != null && around.Count > 0) {
                 var nextPoints = around.First().Value.Next;
@@ -250,20 +223,20 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 double min = double.MaxValue;
                 int resultIndex = -1;
                 foreach(int index in nextPoints) {
-                    double dist = points[index].Poisition.DistanceTo(end);
+                    double dist = points[index].Position.DistanceTo(end);
                     if(dist < min) {
                         min = dist;
                         resultIndex = index;
                     }
                 }
-                return points[resultIndex].Poisition;
+                return points[resultIndex].Position;
             }
             
             //not in some point
-            var closest = points.list.OrderBy(p => p.Value.Poisition.DistanceTo(start)).Take(2);
-            var goTo = closest.OrderBy(p => p.Value.Poisition.DistanceTo(end)).First();
+            var closest = points.list.OrderBy(p => p.Value.Position.DistanceTo(start)).Take(2);
+            var goTo = closest.OrderBy(p => p.Value.Position.DistanceTo(end)).First();
 
-            return goTo.Value.Poisition;
+            return goTo.Value.Position;
         }
 
         static void InitializeMap() {
@@ -303,17 +276,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
     }
     public class Checkpoint {
-        public Vector Poisition;
+        public Vector Position;
         public const int Radius = 50;
         public List<int> Next = new List<int>();
 
         public Checkpoint(double x, double y, int[] next) {
-            Poisition = new Vector(x, y);
+            Position = new Vector(x, y);
             Next.AddRange(next);
         }
-
-
     }
-
-
 }
