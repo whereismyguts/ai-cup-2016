@@ -240,20 +240,30 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public static Vector NextPointToGo(double x0, double y0, double x1, double y1) {
             Vector end = new Vector(x1, y1);
             Vector start = new Vector(x0, y0);
-            Checkpoint closest = points.list.OrderBy(p => p.Value.Poisition.DistanceTo(start)).First().Value;
-            if(closest.Poisition.DistanceTo(start) > Checkpoint.Radius)
-                return closest.Poisition;
 
-            double min = double.MaxValue;
-            int goTo = 0;
-            foreach(int index in closest.Next) {
-                double dist = points[index].Poisition.DistanceTo(end);
-                if(dist < min) {
-                    min = dist;
-                    goTo = index;
+            var around = points.list.Where(p => p.Value.Poisition.DistanceTo(start) < Checkpoint.Radius).ToList();
+            //in some point
+            if(around != null && around.Count > 0) {
+                var nextPoints = around.First().Value.Next;
+                int currentPoint = around.First().Key;
+
+                double min = double.MaxValue;
+                int resultIndex = -1;
+                foreach(int index in nextPoints) {
+                    double dist = points[index].Poisition.DistanceTo(end);
+                    if(dist < min) {
+                        min = dist;
+                        resultIndex = index;
+                    }
                 }
+                return points[resultIndex].Poisition;
             }
-            return points[goTo].Poisition;
+            
+            //not in some point
+            var closest = points.list.OrderBy(p => p.Value.Poisition.DistanceTo(start)).Take(2);
+            var goTo = closest.OrderBy(p => p.Value.Poisition.DistanceTo(end)).First();
+
+            return goTo.Value.Poisition;
         }
 
         static void InitializeMap() {
