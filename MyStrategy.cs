@@ -24,13 +24,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.move = move;
             this.game = game;
 
-  
+
 
             //run
             LivingUnit runFrom = FindDanger();
             if(runFrom != null) {
                 Goal(false, runFrom.X, runFrom.Y);
-                move.Action = ActionType.MagicMissile;
                 return;
             }
             //attack
@@ -77,7 +76,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 move.Turn = me.GetAngleTo(archEnemy);
             move.Speed = 0;
 
+            var dist = archEnemy.GetDistanceTo(me.X, me.Y);
+
             move.Action = ActionType.MagicMissile;
+            move.MinCastDistance = dist - archEnemy.Radius * 1.5;
+            move.MaxCastDistance = dist + archEnemy.Radius * 1.5;
             if(strafe == 30) {
                 strafeSpeed = -1;
             }
@@ -162,7 +165,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         void Goal(bool fwd, double x, double y) {
             move.Turn = me.GetAngleTo(x, y);
             move.Speed = fwd ? 30 : -30;
-            if(!fwd) move.Action = ActionType.MagicMissile;
+            //if(!fwd) move.Action = ActionType.MagicMissile;
             WalkAroundIfNeed();
         }
 
