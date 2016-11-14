@@ -33,8 +33,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //run
             LivingUnit runFrom = FindDanger();
             if(runFrom != null) {
-                var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
-                Goal(false, save.X, save.Y);
+             //   var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
+                Goal(false, runFrom.X, runFrom.Y);
                 return;
             }
             //attack
@@ -55,14 +55,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
 
             //test
-            var pointToGo = CpWalker.NextPointToGo(me.X, me.Y, 2000, 50);
-            Goal(true, pointToGo.X, pointToGo.Y);
+            //var pointToGo = CpWalker.NextPointToGo(me.X, me.Y, 2000, 50);
+            //Goal(true, pointToGo.X, pointToGo.Y);
             //
 
 
 
 
-            //FollowMinions();
+            FollowMinions();
         }
 
         private void PerformRoute() {
@@ -107,7 +107,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         private LivingUnit GetFave() {
             try {
-                return world.Minions.OrderBy(m => m.GetDistanceTo(me)).Last();
+                return world.Minions.OrderBy(m => m.GetDistanceTo(me)).First();
             }
             catch { }
             return null;
@@ -193,7 +193,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             blocks.AddRange(world.Wizards);
 
             try {
-                CircularUnit obj = blocks.Where(b => b.Id != me.Id).OrderBy(u => u.GetDistanceTo(me)).Last();
+                CircularUnit obj = blocks.Where(b => b.Id != me.Id).OrderBy(u => u.GetDistanceTo(me)).First();
                 double closeDist = me.Radius + obj.Radius + 10;
                 if(obj.GetDistanceTo(me.X, me.Y) < closeDist) {
                     double angle = me.GetAngleTo(obj.X, obj.Y);
