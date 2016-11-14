@@ -258,17 +258,29 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         static void InitializeMap() {
             points = new CheckpointList();
-            points.Add(0, 100, 3900, 1, 2, 3);
-            points.Add(1, 20, 3700, 0);
-            points.Add(2, 200, 3800, 0, 4);
-            points.Add(3, 300, 3980, 0);
-            points.Add(4, 300, 3750, 2);
-            points.Add(10, 3900, 100, 4);// another base
+            points.Add(0, 185, 3330, 1, 3);
+            points.Add(1, 630, 3390, 1, 2, 4);
+            points.Add(2, 650, 3830, 1, 5);
+            points.Add(3, 190, 2670, 0, 6);
+            points.Add(4, 1080, 2980, 1, 7);
+            points.Add(5, 1390, 3820, 2, 8);
+            points.Add(6, 170, 1650, 3, 9);
+            points.Add(7, 1545, 2435, 4, 10);
+            points.Add(8, 2280, 3820, 5, 11);
+            points.Add(9, 275, 275, 6, 10, 12);
+            points.Add(10, 2000, 2000, 7, 9, 13, 11);
+            points.Add(11, 3600, 3600, 8, 10, 14);
+            points.Add(12, 1675, 233, 9, 15);
+            points.Add(13, 2529, 1457, 10, 16);
+            points.Add(14, 3840, 2350, 11, 17);
+            points.Add(15, 2650, 170, 12, 18);
+            points.Add(16, 2960, 980, 13, 19);
+            points.Add(17, 2777, 1313, 14, 20);
+            points.Add(18, 3300, 177, 15, 19);
+            points.Add(19, 3385, 561, 16, 18, 20);
+            points.Add(20, 3785, 600, 17, 19);
+
         }
-
-
-
-
     }
     public class CheckpointList {
         public Dictionary<int, Checkpoint> list = new Dictionary<int, Checkpoint>();
