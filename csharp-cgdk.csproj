@@ -73,8 +73,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AStar.cs" />
-    <Compile Include="Grid.cs" />
     <Compile Include="Model\ActionType.cs" />
     <Compile Include="Model\Bonus.cs" />
     <Compile Include="Model\BonusType.cs" />

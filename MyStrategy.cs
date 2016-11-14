@@ -18,18 +18,23 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         // get target: 
         //correct distance to fave, go away, attack weak enemy, get bomus
 
+        Vector home;
+
         public void Move(Wizard me, World world, Game game, Move move) {
             this.me = me;
             this.world = world;
             this.move = move;
             this.game = game;
-
-
+            if(home.IsEmpty)
+                home = me.Faction == Faction.Academy ?
+                    CpWalker.points[0].Poisition :
+                    CpWalker.points[10].Poisition;
 
             //run
             LivingUnit runFrom = FindDanger();
             if(runFrom != null) {
-                Goal(false, runFrom.X, runFrom.Y);
+                var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
+                Goal(false, save.X, save.Y);
                 return;
             }
             //attack
@@ -47,8 +52,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //strafe = 0; ??
             //find what to do
 
-            //PerformRoute();
-            FollowMinions();
+
+
+            //test
+            var pointToGo = CpWalker.NextPointToGo(me.X, me.Y, 2000, 50);
+            Goal(true, pointToGo.X, pointToGo.Y);
+            //
+
+
+
+
+            //FollowMinions();
         }
 
         private void PerformRoute() {
@@ -183,7 +197,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 double closeDist = me.Radius + obj.Radius + 10;
                 if(obj.GetDistanceTo(me.X, me.Y) < closeDist) {
                     double angle = me.GetAngleTo(obj.X, obj.Y);
-                    move.Speed = -Math.Cos(angle) * 3;
+                    move.Speed = -Math.Cos(angle) * 4;
                     move.StrafeSpeed = -Math.Sin(angle) * 3;
                     move.Turn = 0;
                 }
@@ -192,11 +206,92 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
     }
     public struct Vector {
+
         public Vector(double x, double y) {
             this.X = x;
             this.Y = y;
         }
+
+        public bool IsEmpty { get { return X == 0 && Y == 0; } }
         public double X { get; set; }
         public double Y { get; set; }
+
+        internal double DistanceTo(Vector point) {
+            double dx = X - point.X;
+            double dy = Y - point.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+        public static Vector operator /(Vector c1, double f) {
+            return new Vector(c1.X / f, c1.Y / f);
+        }
+
     }
+
+
+    public static class CpWalker {
+
+        public static CheckpointList points;
+
+        static CpWalker() {
+            InitializeMap();
+
+        }
+
+        public static Vector NextPointToGo(double x0, double y0, double x1, double y1) {
+            Vector end = new Vector(x1, y1);
+            Vector start = new Vector(x0, y0);
+            Checkpoint closest = points.list.OrderBy(p => p.Value.Poisition.DistanceTo(start)).First().Value;
+            if(closest.Poisition.DistanceTo(start) > Checkpoint.Radius)
+                return closest.Poisition;
+
+            double min = double.MaxValue;
+            int goTo = 0;
+            foreach(int index in closest.Next) {
+                double dist = points[index].Poisition.DistanceTo(end);
+                if(dist < min) {
+                    min = dist;
+                    goTo = index;
+                }
+            }
+            return points[goTo].Poisition;
+        }
+
+        static void InitializeMap() {
+            points = new CheckpointList();
+            points.Add(0, 100, 3900, 1, 2, 3);
+            points.Add(1, 20, 3700, 0);
+            points.Add(2, 200, 3800, 0, 4);
+            points.Add(3, 300, 3980, 0);
+            points.Add(4, 300, 3750, 2);
+            points.Add(10, 3900, 100, 4);// another base
+        }
+
+
+
+
+    }
+    public class CheckpointList {
+        public Dictionary<int, Checkpoint> list = new Dictionary<int, Checkpoint>();
+        internal void Add(int id, double x, double y, params int[] next) {
+            list[id] = new Checkpoint(x, y, next);
+        }
+        public Checkpoint this[int i] {
+            get { return list[i]; }
+            //  set { InnerList[i] = value; }
+        }
+    }
+    public class Checkpoint {
+        public Vector Poisition;
+        public const int Radius = 50;
+        public List<int> Next = new List<int>();
+
+        public Checkpoint(double x, double y, int[] next) {
+            Poisition = new Vector(x, y);
+            Next.AddRange(next);
+        }
+
+
+    }
+
+
 }
