@@ -14,62 +14,124 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         int strafe = 0;
         int strafeSpeed = 1;
-        //   Vector home;
+
+        ClusterController clController = new ClusterController();
 
         public void Move(Wizard me, World world, Game game, Move move) {
             this.me = me;
             this.world = world;
             this.move = move;
             this.game = game;
-            //if(home.IsEmpty)
-            //    home = me.Faction == Faction.Academy ?
-            //        CpWalker.points[1].Position :
-            //        CpWalker.points[19].Position;
 
-            //run
+            UpdateMap();
+
             LivingUnit runFrom = FindDanger();
             if(runFrom != null) {
-                //   var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
-                Goal(false, runFrom.X, runFrom.Y);
+
+                TryToGo(runFrom.X, runFrom.Y);
                 return;
             }
             //attack
             LivingUnit archEnemy = FindArchEnemy();
             if(archEnemy != null) {
-                if(me.GetDistanceTo(archEnemy.X, archEnemy.Y) > me.CastRange * 0.8) {
-                    Goal(true, archEnemy.X, archEnemy.Y);
-                    return;
-                }
-                else {
-                    Attack(archEnemy);
-                    return;
+                Fight(archEnemy);
+                return;
+            }
+
+            MakeMove();
+
+
+            //   FollowMinions();
+        }
+
+        private void MakeMove() {
+            var objects = new List<CircularUnit>();
+            objects.AddRange(world.Wizards);
+            objects.AddRange(world.Buildings);
+            objects.AddRange(world.Minions);
+            clController.Update(objects);
+            var goal = clController.Clusters.OrderBy(c => c.Value).Last();
+            if(goal != null)
+                TryToGo(goal.Position.X, goal.Position.Y);
+            else
+                FollowMinions();
+        }
+
+        class Cluster {
+            List<CircularUnit> units = new List<CircularUnit>();
+            public Cluster(CircularUnit obj1) {
+                units.Add(obj1);
+                Radius = 100;
+                UpdatePosition();
+            }
+            public Vector Position { get; internal set; }
+            public double Radius { get; internal set; }
+            public object Value { get; internal set; }
+
+            internal void AddUnit(CircularUnit obj1) {
+                units.Add(obj1);
+                UpdatePosition();
+                UpdateRadius();
+            }
+            private void UpdateRadius() {
+                Radius = Math.Max(Radius, units.OrderBy(u => u.GetDistanceTo(Position.X, Position.Y)).Last().GetDistanceTo(Position.X, Position.Y));
+            }
+            private void UpdatePosition() {
+                Position = new Vector(units.Sum(u => u.X) / units.Count, units.Sum(u => u.Y) / units.Count);
+            }
+            internal bool IsOwnerOf(CircularUnit obj1) {
+                return Position.DistanceTo(obj1.X, obj1.Y) <= Radius;
+            }
+        }
+        class ClusterController {
+            public List<Cluster> Clusters { get; set; } = new List<Cluster>();
+            internal void Update(List<CircularUnit> objects) {
+                Clusters = new List<Cluster>();
+                List<CircularUnit> used = new List<CircularUnit>();
+                foreach(var obj1 in objects) {
+                    Cluster owner = Clusters.Find(c => c.IsOwnerOf(obj1));
+                    if(owner != null)
+                        owner.AddUnit(obj1);
+                    else {
+                        Clusters.Add(new Cluster(obj1));
+                    }
                 }
             }
-            //strafe = 0; ??
-            //find what to do
 
+        }
 
+        private void Fight(LivingUnit archEnemy) {
+            double dist = me.GetDistanceTo(archEnemy.X, archEnemy.Y);
+            if(dist > me.CastRange * 0.9) {
+                Goal(true, archEnemy.X, archEnemy.Y);
+                return;
+            }
+            else
+                if(dist > me.CastRange * 0.3) {
+                Goal(false, archEnemy.X, archEnemy.Y);
+            }
+            Attack(archEnemy);
+        }
 
-            //test
-            //var pointToGo = CpWalker.NextPointToGo(me.X, me.Y, 2000, 50);
-            //Goal(true, pointToGo.X, pointToGo.Y);
-            //
-
+        private void UpdateMap() {
             var objects = new List<CircularUnit>();
             objects.AddRange(world.Buildings);
             objects.AddRange(world.Trees);
-
             if(grid == null)
                 grid = new Grid(objects);
             else
                 grid.Reveal(objects);
+        }
 
-
-            var path = grid.GetPath(me.X, me.Y, 1271, 1341);
-            if(path != null)
-                Goal(true, path[1].X, path[1].Y);
-
-            //   FollowMinions();
+        private void TryToGo(double x, double y) {
+            if(grid != null) {
+                var path = grid.GetPath(me.X, me.Y, x, y);
+                if(path != null && path.Count > 1) {
+                    Goal(true, path[1].X, path[1].Y);
+                    return;
+                }
+            }
+            Goal(true, x, y);
         }
 
         Grid grid;
@@ -78,27 +140,28 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             LivingUnit fave = GetFave();
             if(fave != null) {
                 Vector goal = CalcFaveNearPoint(fave, 0, 100);
-                Goal(true, goal.X, goal.Y);
+                TryToGo(goal.X, goal.Y);
             }
         }
         void Attack(LivingUnit archEnemy) {
-            if(Math.Abs(me.GetAngleTo(archEnemy)) > 0.01)
-                move.Turn = me.GetAngleTo(archEnemy);
-            move.Speed = 0;
-
+            double angle = me.GetAngleTo(archEnemy);
             var dist = archEnemy.GetDistanceTo(me.X, me.Y);
 
+            if(Math.Abs(angle) > 0.01)
+                move.Turn = angle;
+
+            move.Speed = 0;
             move.Action = ActionType.MagicMissile;
             move.MinCastDistance = dist - archEnemy.Radius * 1.5;
             move.MaxCastDistance = dist + archEnemy.Radius * 1.5;
-            if(strafe == 30) {
-                strafeSpeed = -1;
-            }
-            if(strafe == -30) {
-                strafeSpeed = 1;
-            }
-            move.StrafeSpeed = strafeSpeed * game.WizardStrafeSpeed;
-            strafe += strafeSpeed;
+            //if(strafe == 30) {
+            //    strafeSpeed = -1;
+            //}
+            //if(strafe == -30) {
+            //    strafeSpeed = 1;
+            //}
+            //move.StrafeSpeed = strafeSpeed * game.WizardStrafeSpeed;
+            //strafe += strafeSpeed;
         }
         LivingUnit GetFave() {
             try {
@@ -170,12 +233,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return new Vector(goalUnit.X - Math.Cos(angleTotal) * distTo, goalUnit.Y - Math.Sin(angleTotal) * distTo);
         }
         void Goal(bool fwd, double x, double y) {
+            if(WalkAround())
+                return;
             move.Turn = me.GetAngleTo(x, y);
-            move.Speed = fwd ? 30 : -30;
+            move.Speed = fwd ? game.WizardForwardSpeed : -game.WizardBackwardSpeed;
             //if(!fwd) move.Action = ActionType.MagicMissile;
-            WalkAroundIfNeed();
+
         }
-        void WalkAroundIfNeed() {
+        bool WalkAround() {
             List<CircularUnit> blocks = new List<CircularUnit>();
             blocks.AddRange(world.Buildings);
             blocks.AddRange(world.Trees);
@@ -184,15 +249,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             try {
                 CircularUnit obj = blocks.Where(b => b.Id != me.Id).OrderBy(u => u.GetDistanceTo(me)).First();
-                double closeDist = me.Radius + obj.Radius + 10;
-                if(obj.GetDistanceTo(me.X, me.Y) < closeDist) {
-                    double angle = me.GetAngleTo(obj.X, obj.Y);
-                    move.Speed = -Math.Cos(angle) * 4;
-                    move.StrafeSpeed = -Math.Sin(angle) * 3;
-                    move.Turn = 0;
+                double minDist = me.Radius + obj.Radius + 10;
+                double angle = me.GetAngleTo(obj.X, obj.Y);
+                double dist = obj.GetDistanceTo(me.X, me.Y);
+                if(Math.Abs(angle) <= Math.PI / 3 && dist < minDist) {
+                    move.Speed = game.WizardForwardSpeed;
+                    move.Turn = -angle;
+                    return true;
                 }
             }
             catch { };
+            return false;
         }
     }
 

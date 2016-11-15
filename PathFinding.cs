@@ -211,6 +211,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             double dy = Y - point.Y;
             return Math.Sqrt(dx * dx + dy * dy);
         }
+
+        internal double DistanceTo(double x, double y) {
+            double dx = X - x;
+            double dy = Y - y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
         public static Vector operator /(Vector c1, double f) {
             return new Vector(c1.X / f, c1.Y / f);
         }
