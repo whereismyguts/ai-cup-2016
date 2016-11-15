@@ -14,22 +14,22 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         int strafe = 0;
         int strafeSpeed = 1;
-        Vector home;
+        //   Vector home;
 
         public void Move(Wizard me, World world, Game game, Move move) {
             this.me = me;
             this.world = world;
             this.move = move;
             this.game = game;
-            if(home.IsEmpty)
-                home = me.Faction == Faction.Academy ?
-                    CpWalker.points[1].Position :
-                    CpWalker.points[19].Position;
+            //if(home.IsEmpty)
+            //    home = me.Faction == Faction.Academy ?
+            //        CpWalker.points[1].Position :
+            //        CpWalker.points[19].Position;
 
             //run
             LivingUnit runFrom = FindDanger();
             if(runFrom != null) {
-             //   var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
+                //   var save = CpWalker.NextPointToGo(me.X, me.Y, home.X, home.Y);
                 Goal(false, runFrom.X, runFrom.Y);
                 return;
             }
@@ -55,11 +55,22 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //Goal(true, pointToGo.X, pointToGo.Y);
             //
 
+            if(grid == null)
+                grid = new Grid(world);
+            else
+                grid.Reveal(world);
 
 
 
-            FollowMinions();
+            var path = grid.GetPath(me.X, me.Y, 1271, 1341);
+
+            Goal(true, path[1].X, path[1].Y);
+
+            //   FollowMinions();
         }
+
+        Grid grid;
+
         void FollowMinions() {
             LivingUnit fave = GetFave();
             if(fave != null) {
@@ -181,108 +192,89 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             catch { };
         }
     }
-    public struct Vector {
-        public Vector(double x, double y) {
-            this.X = x;
-            this.Y = y;
-        }
 
-        public bool IsEmpty { get { return X == 0 && Y == 0; } }
-        public double X { get; set; }
-        public double Y { get; set; }
+    //public static class CpWalker {
 
-        internal double DistanceTo(Vector point) {
-            double dx = X - point.X;
-            double dy = Y - point.Y;
-            return Math.Sqrt(dx * dx + dy * dy);
-        }
-        public static Vector operator /(Vector c1, double f) {
-            return new Vector(c1.X / f, c1.Y / f);
-        }
+    //    public static CheckpointList points;
 
-    }
-    public static class CpWalker {
+    //    static CpWalker() {
+    //        InitializeMap();
 
-        public static CheckpointList points;
+    //    }
 
-        static CpWalker() {
-            InitializeMap();
+    //    public static Vector NextPointToGo(double x0, double y0, double x1, double y1) {
+    //        Vector end = new Vector(x1, y1);
+    //        Vector start = new Vector(x0, y0);
 
-        }
+    //        var around = points.list.Where(p => p.Value.Position.DistanceTo(start) < Checkpoint.Radius).ToList();
+    //        //in some point
+    //        if(around != null && around.Count > 0) {
+    //            var nextPoints = around.First().Value.Next;
+    //            int currentPoint = around.First().Key;
 
-        public static Vector NextPointToGo(double x0, double y0, double x1, double y1) {
-            Vector end = new Vector(x1, y1);
-            Vector start = new Vector(x0, y0);
+    //            double min = double.MaxValue;
+    //            int resultIndex = -1;
+    //            foreach(int index in nextPoints) {
+    //                double dist = points[index].Position.DistanceTo(end);
+    //                if(dist < min) {
+    //                    min = dist;
+    //                    resultIndex = index;
+    //                }
+    //            }
+    //            return points[resultIndex].Position;
+    //        }
 
-            var around = points.list.Where(p => p.Value.Position.DistanceTo(start) < Checkpoint.Radius).ToList();
-            //in some point
-            if(around != null && around.Count > 0) {
-                var nextPoints = around.First().Value.Next;
-                int currentPoint = around.First().Key;
+    //        //not in some point
+    //        var closest = points.list.OrderBy(p => p.Value.Position.DistanceTo(start)).Take(2);
+    //        var goTo = closest.OrderBy(p => p.Value.Position.DistanceTo(end)).First();
 
-                double min = double.MaxValue;
-                int resultIndex = -1;
-                foreach(int index in nextPoints) {
-                    double dist = points[index].Position.DistanceTo(end);
-                    if(dist < min) {
-                        min = dist;
-                        resultIndex = index;
-                    }
-                }
-                return points[resultIndex].Position;
-            }
-            
-            //not in some point
-            var closest = points.list.OrderBy(p => p.Value.Position.DistanceTo(start)).Take(2);
-            var goTo = closest.OrderBy(p => p.Value.Position.DistanceTo(end)).First();
+    //        return goTo.Value.Position;
+    //    }
 
-            return goTo.Value.Position;
-        }
+    //    static void InitializeMap() {
+    //        points = new CheckpointList();
+    //        points.Add(0, 185, 3330, 1, 3);
+    //        points.Add(1, 630, 3390, 1, 2, 4);
+    //        points.Add(2, 650, 3830, 1, 5);
+    //        points.Add(3, 190, 2670, 0, 6);
+    //        points.Add(4, 1080, 2980, 1, 7);
+    //        points.Add(5, 1390, 3820, 2, 8);
+    //        points.Add(6, 170, 1650, 3, 9);
+    //        points.Add(7, 1545, 2435, 4, 10);
+    //        points.Add(8, 2280, 3820, 5, 11);
+    //        points.Add(9, 275, 275, 6, 10, 12);
+    //        points.Add(10, 2000, 2000, 7, 9, 13, 11);
+    //        points.Add(11, 3600, 3600, 8, 10, 14);
+    //        points.Add(12, 1675, 233, 9, 15);
+    //        points.Add(13, 2529, 1457, 10, 16);
+    //        points.Add(14, 3840, 2350, 11, 17);
+    //        points.Add(15, 2650, 170, 12, 18);
+    //        points.Add(16, 2960, 980, 13, 19);
+    //        points.Add(17, 2777, 1313, 14, 20);
+    //        points.Add(18, 3300, 177, 15, 19);
+    //        points.Add(19, 3385, 561, 16, 18, 20);
+    //        points.Add(20, 3785, 600, 17, 19);
 
-        static void InitializeMap() {
-            points = new CheckpointList();
-            points.Add(0, 185, 3330, 1, 3);
-            points.Add(1, 630, 3390, 1, 2, 4);
-            points.Add(2, 650, 3830, 1, 5);
-            points.Add(3, 190, 2670, 0, 6);
-            points.Add(4, 1080, 2980, 1, 7);
-            points.Add(5, 1390, 3820, 2, 8);
-            points.Add(6, 170, 1650, 3, 9);
-            points.Add(7, 1545, 2435, 4, 10);
-            points.Add(8, 2280, 3820, 5, 11);
-            points.Add(9, 275, 275, 6, 10, 12);
-            points.Add(10, 2000, 2000, 7, 9, 13, 11);
-            points.Add(11, 3600, 3600, 8, 10, 14);
-            points.Add(12, 1675, 233, 9, 15);
-            points.Add(13, 2529, 1457, 10, 16);
-            points.Add(14, 3840, 2350, 11, 17);
-            points.Add(15, 2650, 170, 12, 18);
-            points.Add(16, 2960, 980, 13, 19);
-            points.Add(17, 2777, 1313, 14, 20);
-            points.Add(18, 3300, 177, 15, 19);
-            points.Add(19, 3385, 561, 16, 18, 20);
-            points.Add(20, 3785, 600, 17, 19);
+    //    }
+    //}
+    //public class CheckpointList {
+    //    public Dictionary<int, Checkpoint> list = new Dictionary<int, Checkpoint>();
+    //    internal void Add(int id, double x, double y, params int[] next) {
+    //        list[id] = new Checkpoint(x, y, next);
+    //    }
+    //    public Checkpoint this[int i] {
+    //        get { return list[i]; }
+    //        //  set { InnerList[i] = value; }
+    //    }
+    //}
+    //public class Checkpoint {
+    //    public Vector Position;
+    //    public const int Radius = 50;
+    //    public List<int> Next = new List<int>();
 
-        }
-    }
-    public class CheckpointList {
-        public Dictionary<int, Checkpoint> list = new Dictionary<int, Checkpoint>();
-        internal void Add(int id, double x, double y, params int[] next) {
-            list[id] = new Checkpoint(x, y, next);
-        }
-        public Checkpoint this[int i] {
-            get { return list[i]; }
-            //  set { InnerList[i] = value; }
-        }
-    }
-    public class Checkpoint {
-        public Vector Position;
-        public const int Radius = 50;
-        public List<int> Next = new List<int>();
-
-        public Checkpoint(double x, double y, int[] next) {
-            Position = new Vector(x, y);
-            Next.AddRange(next);
-        }
-    }
+    //    public Checkpoint(double x, double y, int[] next) {
+    //        Position = new Vector(x, y);
+    //        Next.AddRange(next);
+    //    }
+    //}
 }
