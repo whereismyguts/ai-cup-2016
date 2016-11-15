@@ -55,16 +55,19 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //Goal(true, pointToGo.X, pointToGo.Y);
             //
 
-            if(grid == null)
-                grid = new Grid(world);
-            else
-                grid.Reveal(world);
+            var objects = new List<CircularUnit>();
+            objects.AddRange(world.Buildings);
+            objects.AddRange(world.Trees);
 
+            if(grid == null)
+                grid = new Grid(objects);
+            else
+                grid.Reveal(objects);
 
 
             var path = grid.GetPath(me.X, me.Y, 1271, 1341);
-
-            Goal(true, path[1].X, path[1].Y);
+            if(path != null)
+                Goal(true, path[1].X, path[1].Y);
 
             //   FollowMinions();
         }

@@ -1,19 +1,18 @@
-﻿using System;
+﻿using Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
+namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     public class Grid {
-        const float cellSize = 150;
-        const int skipCells = 1;
-        const int side = 4000;
+        public const float CellSize = 150;
+        public const int MapSize = 4000;
         Random rnd = new Random();
-        List<CircularUnit> objects;
 
-        public Grid(World world) {
+        public Grid(List<CircularUnit> objects) {
 
             //work code:
             //objects = new List<CircularUnit>();
@@ -36,21 +35,19 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
 
             //var path = GetPath(start, end);
 
-            Reveal(world);
 
-            CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "init");
+
+            Reveal(objects);
+
+            //  CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "init");
 
         }
-        int objCount = 0;
-        public void Reveal(World world) {
-
-            objects = new List<CircularUnit>();
-            objects.AddRange(world.Buildings);
-            objects.AddRange(world.Trees);
-            if(objCount != objects.Count) {
+        List<CircularUnit> units = new List<CircularUnit>();
+        public void Reveal(List<CircularUnit> objects) {
+            if(cells.List.Count != objects.Count) {
                 CreateCells(objects);
+                units.AddRange(objects.Where(o => units.Find(u => u.Id == o.Id) == null));
                 CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "rev_" + objects.Count);
-                objCount = objects.Count;
             }
         }
 
@@ -62,14 +59,16 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
             pathInCells = Opimize(pathInCells);
             List<Vector> pathInCoord = new List<Vector>();
             foreach(Point cell in pathInCells.List) {
-                pathInCoord.Add(new Vector(cell.X * cellSize + cellSize / 2.0, cell.Y * cellSize + cellSize / 2.0));
+                pathInCoord.Add(new Vector(cell.X * CellSize + CellSize / 2.0, cell.Y * CellSize + CellSize / 2.0));
             }
+
+            CreateBitmapAtRuntime(pathInCoord, start, end, "path_");
             return pathInCoord;
         }
 
         public List<Vector> GetPath(double x, double y, double x1, double y1) {
-            Point start = new Point((int)(x / cellSize), (int)(y / cellSize));
-            Point end = new Point((int)(x1 / cellSize), (int)(y1 / cellSize));
+            Point start = new Point((int)(x / CellSize), (int)(y / CellSize));
+            Point end = new Point((int)(x1 / CellSize), (int)(y1 / CellSize));
             return GetPath(start, end);
         }
 
@@ -80,7 +79,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
                 for(double a = 0; a < Math.PI * 2; a += radStep) {
                     double y = Math.Sin(a) * radius + unit.Y;
                     double x = Math.Cos(a) * radius + unit.X;
-                    cells.Add((int)Math.Floor(x / cellSize), (int)Math.Floor(y / cellSize));
+                    cells.Add((int)Math.Floor(x / CellSize), (int)Math.Floor(y / CellSize));
                 }
             }
         }
@@ -101,14 +100,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
             return path;
         }
         public void CreateBitmapAtRuntime(List<Vector> path, Point start, Point end, string name) {
-            System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(side, side);
+            System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(MapSize, MapSize);
             System.Drawing.Graphics gr = System.Drawing.Graphics.FromImage(bitmap);
             //gr.Clear(Color.White);
 
             System.Drawing.Pen pen = new System.Drawing.Pen(System.Drawing.Color.Gray, 5);
 
             foreach(Point point in cells.List)
-                gr.DrawRectangle(pen, point.X * cellSize, point.Y * cellSize, cellSize, cellSize);
+                gr.DrawRectangle(pen, point.X * CellSize, point.Y * CellSize, CellSize, CellSize);
 
             if(path != null) {
                 foreach(Vector point in path)
@@ -117,11 +116,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
             }
 
             if(!start.IsEmpty && !end.IsEmpty) {
-                gr.FillEllipse(System.Drawing.Brushes.Green, start.X * cellSize + cellSize / 2 - dotRadius, start.Y * cellSize + cellSize / 2 - dotRadius, dotRadius * 2, dotRadius * 2);
-                gr.FillEllipse(System.Drawing.Brushes.Red, end.X * cellSize + cellSize / 2 - dotRadius, end.Y * cellSize + cellSize / 2 - dotRadius, dotRadius * 2, dotRadius * 2);
+                gr.FillEllipse(System.Drawing.Brushes.Green, start.X * CellSize + CellSize / 2 - dotRadius, start.Y * CellSize + CellSize / 2 - dotRadius, dotRadius * 2, dotRadius * 2);
+                gr.FillEllipse(System.Drawing.Brushes.Red, end.X * CellSize + CellSize / 2 - dotRadius, end.Y * CellSize + CellSize / 2 - dotRadius, dotRadius * 2, dotRadius * 2);
             }
 
-            foreach(var point in objects) {
+            foreach(var point in units) {
                 gr.FillEllipse(System.Drawing.Brushes.White,
                     (float)(point.X - point.Radius),
                     (float)(point.Y - point.Radius),
@@ -129,14 +128,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model {
                     (float)(point.Radius * 2));
             }
 
-            bitmap.Save("test.bmp", System.Drawing.Imaging.ImageFormat.Bmp);
-            System.Diagnostics.Process.Start("test.bmp");
+            bitmap.Save(name + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+            //  System.Diagnostics.Process.Start(name + ".bmp");
         }
 
         PointList cells = new PointList();
+        public PointList Cells {
+            get { return cells; }
+        }
         //PointList path = new PointList();
         private Point GetRandomPoint(PointList cells) {
-            Point p = new Point(rnd.Next(0, (int)(side / cellSize)), rnd.Next(0, (int)(side / cellSize)));
+            Point p = new Point(rnd.Next(0, (int)(MapSize / CellSize)), rnd.Next(0, (int)(MapSize / CellSize)));
             return cells.Contains(p) ? GetRandomPoint(cells) : p;
         }
         const int dotRadius = 35;
