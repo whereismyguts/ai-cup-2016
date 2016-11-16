@@ -47,22 +47,24 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(cells.List.Count != objects.Count) {
                 CreateCells(objects);
                 units.AddRange(objects.Where(o => units.Find(u => u.Id == o.Id) == null));
-            //    CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "rev_" + objects.Count);
+                //    CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "rev_" + objects.Count);
             }
         }
 
         public List<Vector> GetPath(Point start, Point end) {
             // var max = (int)Math.Ceiling(4000 / cellSize);
             PointList pathInCells = AStar.FindPath(cells, start, end);
-            if(pathInCells == null)
+            if(pathInCells == null) {
+                // CreateBitmapAtRuntime(null, start, end, "path_");
                 return null;
+        }
             pathInCells = Opimize(pathInCells);
             List<Vector> pathInCoord = new List<Vector>();
             foreach(Point cell in pathInCells.List) {
                 pathInCoord.Add(new Vector(cell.X * CellSize + CellSize / 2.0, cell.Y * CellSize + CellSize / 2.0));
             }
 
-           // CreateBitmapAtRuntime(pathInCoord, start, end, "path_");
+            // CreateBitmapAtRuntime(pathInCoord, start, end, "path_");
             return pathInCoord;
         }
 
@@ -71,17 +73,19 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Point end = new Point((int)(x1 / CellSize), (int)(y1 / CellSize));
             return GetPath(start, end);
         }
-
+        List<long> processedObjects = new List<long>();
         const double radStep = Math.PI / 8;
         void CreateCells(List<CircularUnit> objects) {
-            foreach(CircularUnit unit in objects) {
-                double radius = unit.Radius * 1.5;
-                for(double a = 0; a < Math.PI * 2; a += radStep) {
-                    double y = Math.Sin(a) * radius + unit.Y;
-                    double x = Math.Cos(a) * radius + unit.X;
-                    cells.Add((int)Math.Floor(x / CellSize), (int)Math.Floor(y / CellSize));
+            foreach(CircularUnit unit in objects)
+                if(!processedObjects.Contains(unit.Id)) {
+                    double radius = unit.Radius * 1.5;
+                    for(double a = 0; a < Math.PI * 2; a += radStep) {
+                        double y = Math.Sin(a) * radius + unit.Y;
+                        double x = Math.Cos(a) * radius + unit.X;
+                        cells.Add((int)Math.Floor(x / CellSize), (int)Math.Floor(y / CellSize));
+                    }
+                    processedObjects.Add(unit.Id);
                 }
-            }
         }
         private PointList Opimize(PointList path) {
             List<Point> toRemove = new List<Point>();
@@ -106,8 +110,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             System.Drawing.Pen pen = new System.Drawing.Pen(System.Drawing.Color.Gray, 5);
 
-            foreach(Point point in cells.List)
+            foreach(Point point in cells.List) {
                 gr.DrawRectangle(pen, point.X * CellSize, point.Y * CellSize, CellSize, CellSize);
+                gr.DrawString(point.X + " " + point.Y,
+                    new System.Drawing.Font(System.Drawing.FontFamily.Families[0], 20),
+                    System.Drawing.Brushes.BlueViolet, point.X * CellSize, point.Y * CellSize, System.Drawing.StringFormat.GenericDefault);
+            }
 
             if(path != null) {
                 foreach(Vector point in path)
@@ -133,7 +141,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         PointList cells = new PointList();
-        public PointList Cells {
+        public PointList Cells
+        {
             get { return cells; }
         }
         //PointList path = new PointList();
@@ -229,7 +238,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     }
     public struct Point {
         public static Point Empty { get { return new Point(); } }
-        public bool IsEmpty {
+        public bool IsEmpty
+        {
             get { return X == 0 && Y == 0; }
         }
         //public override bool Equals(object obj) {
@@ -261,8 +271,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     }
     static class AStar {
         public static PointList FindPath(PointList field, Point start, Point goal) {
-         
-                field.Remove(goal);
+            long exitTick = DateTime.Now.Ticks + 5 * TimeSpan.TicksPerSecond;
+
+            field.Remove(goal);
             field.Remove(start);
 
             // Шаг 1.
@@ -277,6 +288,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             };
             openSet.Add(startNode);
             while(openSet.Count > 0) {
+                if(DateTime.Now.Ticks > exitTick)
+                    return null;
                 // Шаг 3.
                 var currentNode = openSet.OrderBy(node =>
                   node.EstimateFullPathLength).First();
@@ -369,8 +382,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         // Примерное расстояние до цели (H).
         public int HeuristicEstimatePathLength { get; set; }
         // Ожидаемое полное расстояние до цели (F).
-        public int EstimateFullPathLength {
-            get {
+        public int EstimateFullPathLength
+        {
+            get
+            {
                 return this.PathLengthFromStart + this.HeuristicEstimatePathLength;
             }
         }

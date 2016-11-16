@@ -7,7 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
-    public sealed class MyStrategy: IStrategy {
+    public sealed class MyStrategy : IStrategy {
 
         Wizard me;
         World world;
@@ -16,20 +16,36 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         ClusterController clController = new ClusterController();
 
+        static Vector home;
+        static Vector mordor;
+        Faction OppositeFaction;
+        //  static Vector firstAssault;
+
         public void Move(Wizard me, World world, Game game, Move move) {
             this.me = me;
             this.world = world;
             this.move = move;
             this.game = game;
+          
+            if(home.IsEmpty) {
+                home = me.Faction == Faction.Academy ? new Vector(600, 3390) : new Vector(3390, 600);
+                mordor = me.Faction == Faction.Renegades ? new Vector(600, 3390) : new Vector(3390, 600);
+                OppositeFaction = me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
+            }
 
             UpdateMap();
+            if(me.Life < me.MaxLife * 0.5) {
+                LivingUnit runFrom = FindDanger(); //TODO make separate logic block with loacl pathfinding to escape
+                if(runFrom != null && runFrom.GetDistanceTo(me) <= me.VisionRange ) {
 
-            LivingUnit runFrom = FindDanger();
-            if(runFrom != null) {
-                Goal(false, runFrom.X, runFrom.Y);
-                move.Action = ActionType.MagicMissile;
-                //TryToGo(runFrom.X, runFrom.Y);
-                return;
+                    if(me.GetDistanceTo(home.X, home.Y) <= me.VisionRange)
+                        TryToGo(mordor.X, mordor.Y);
+                    else
+                        TryToGo(home.X, home.Y);
+                    move.Action = ActionType.Staff;
+                    //TryToGo(runFrom.X, runFrom.Y);
+                    return;
+                }
             }
             //attack
             LivingUnit archEnemy = FindArchEnemy();
@@ -43,46 +59,72 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             //   FollowMinions();
         }
-
+        bool attackNeutrals = false;
         private void MakeMove() {
 
-           
-            var bouns = world.Bonuses.OrderBy(b => b.GetDistanceTo(me.X, me.Y)).ToList();
-                
+
+            var bouns = world.Bonuses.OrderBy(b => b.GetDistanceTo(me)).ToList();
+
             if(bouns.Count > 0) {
                 TryToGo(bouns[0].X, bouns[0].Y);
                 return;
             }
 
-
             var objects = new List<CircularUnit>();
-            objects.AddRange(world.Wizards.Where(w=>!w.IsMe && w.Faction!= me.Faction));
-            objects.AddRange(world.Buildings.Where(b=>b.Faction!=me.Faction));
-            objects.AddRange(world.Minions.Where(b => b.Faction != me.Faction && b.Faction!= Faction.Neutral));
+            objects.AddRange(world.Wizards.Where(w => !w.IsMe && w.Faction == OppositeFaction));
+            objects.AddRange(world.Buildings.Where(b => b.Faction == OppositeFaction));
+            objects.AddRange(world.Minions.Where(b => b.Faction !=  Faction.Neutral ));
             clController.Update(objects);
 
-            if(objects.Count == 0) {
+            if(clController.Clusters.Count > 0) {
+                var goals = clController.Clusters.OrderBy(c => c.Value(me)).ToList();
 
-                TryToGo(2000, 2000);
+
+                TryToGo(goals);
                 return;
             }
-            var goal =  clController.Clusters.OrderBy(c => c.Value(me)).Last() ;
-            if(goal != null)
-                TryToGo(goal.Position.X, goal.Position.Y);
-            else
-                FollowMinions();
+            
+                TryToGo(2000, 2000);
+        }
+
+        //int 
+
+        private void TryToGo(List<Cluster> goals) {
+            for(int i = goals.Count - 1; i >= 0; i--) {
+                var path = grid.GetPath(me.X, me.Y, goals[i].Position.X, goals[i].Position.Y);
+                if(path != null && path.Count > 1) {
+                    Goal(true, path[1].X, path[1].Y);
+                   
+                    return;
+                    
+                }
+            }
+            Goal(true, goals[0].Position.X, goals[0].Position.Y);
         }
 
         class Cluster {
-           public  List<CircularUnit> units = new List<CircularUnit>();
+            const int COLORSPACE = 0xFF * 0xFF * 0xFF;
+            const int ALPHA = 0xFF << 24;
+            public List<CircularUnit> units = new List<CircularUnit>();
             public Cluster(CircularUnit obj1) {
                 units.Add(obj1);
                 UpdatePosition();
+                //penColor = Color.FromArgb(rnd.Next(COLORSPACE) + ALPHA);
             }
             public Vector Position { get; internal set; }
-            public double Radius { get; internal set; }
-            public object Value(LivingUnit me) {
-                return 100/Position.DistanceTo(me.X,me.Y)   ;
+            //public Color penColor { get; internal set; }
+            //static Random rnd = new Random();
+            public static int Radius = 200;
+            public object Value(Wizard me) {
+                try {
+                    if(units.Count < 3)
+                        return 0d;
+                    double d = me.GetDistanceTo(Position.X, Position.Y);
+                    return d <= me.VisionRange * 2 ? 40000/d : units.Count;
+                }
+                catch(Exception e) {
+                }
+                return 100 / Position.DistanceTo(me.X, me.Y);
             }
 
 
@@ -90,7 +132,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 units.Add(obj1);
                 UpdatePosition();
             }
-            
+
             void UpdatePosition() {
                 Position = new Vector(units.Sum(u => u.X) / units.Count, units.Sum(u => u.Y) / units.Count);
             }
@@ -106,7 +148,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             public List<Cluster> Clusters { get; set; } = new List<Cluster>();
             internal void Update(List<CircularUnit> objects) {
                 Clusters = new List<Cluster>();
-              //  List<CircularUnit> used = new List<CircularUnit>();
                 foreach(var obj1 in objects) {
                     Cluster owner = Clusters.Find(c => c.IsOwnerOf(obj1));
                     if(owner != null)
@@ -115,40 +156,40 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                         Clusters.Add(new Cluster(obj1));
                     }
                 }
-
-              //  Draw();
+                //    if(Clusters.Count>0)
+                // Draw();
             }
-
-            public void Draw() {
-                Pen pen = new Pen(Color.Red, 5);
-                Bitmap bmp = new Bitmap(4000, 4000);
-                Graphics gr = Graphics.FromImage(bmp);
-                foreach(var cluster in Clusters) {
-                    gr.DrawEllipse(pen, (float)(cluster.Position.X - cluster.Radius), (float)(cluster.Position.Y - cluster.Radius), (float)cluster.Radius*2f, (float)cluster.Radius*2f);
-                    foreach(var unit in cluster.units) {
-                        Brush b = new SolidBrush(Color.White);
-                        if(unit is Wizard) {
-                            if(unit.Faction == Faction.Academy)
-                                b = new SolidBrush(Color.Green);
-                            else
-                                b = new SolidBrush(Color.Red);
-                        }
-                        if(unit is Minion) {
-                            if(unit.Faction == Faction.Academy)
-                                b = new SolidBrush(Color.Lime);
-                            else
-                                b = new SolidBrush(Color.Cyan);
-                        }
-                        gr.FillEllipse(b, (float)(unit.X - unit.Radius), (float)(unit.Y - unit.Radius), (float)unit.Radius * 2f, (float)unit.Radius * 2f);
-                    }
-                }
-                bmp.Save("clusters.png", ImageFormat.Png);
-            }
+            //public void Draw() {
+            //    Pen pen = new Pen(Color.Red, 5);
+            //    Bitmap bmp = new Bitmap(4000, 4000);
+            //    Graphics gr = Graphics.FromImage(bmp);
+            //    foreach(var cluster in Clusters) {
+            //       // gr.DrawEllipse(pen, (float)(cluster.Position.X - cluster.Radius), (float)(cluster.Position.Y - cluster.Radius), (float)cluster.Radius*2f, (float)cluster.Radius*2f);
+            //        foreach(var unit in cluster.units) {
+            //            Brush b = new SolidBrush(Color.White);
+            //            if(unit is Wizard) {
+            //                if(unit.Faction == Faction.Academy)
+            //                    b = new SolidBrush(Color.Green);
+            //                else
+            //                    b = new SolidBrush(Color.Red);
+            //            }
+            //            if(unit is Minion) {
+            //                if(unit.Faction == Faction.Academy)
+            //                    b = new SolidBrush(Color.Lime);
+            //                else
+            //                    b = new SolidBrush(Color.Cyan);
+            //            }
+            //            gr.FillEllipse(b, (float)(unit.X - unit.Radius), (float)(unit.Y - unit.Radius), (float)unit.Radius * 2f, (float)unit.Radius * 2f);
+            //            gr.DrawEllipse(new Pen( cluster.penColor, 10), (float)(unit.X - unit.Radius), (float)(unit.Y - unit.Radius), (float)unit.Radius * 2f, (float)unit.Radius * 2f);
+            //        }
+            //    }
+            //    bmp.Save("clusters.png", ImageFormat.Png);
+            //}
         }
 
         private void Fight(LivingUnit archEnemy) {
-            double dist = me.GetDistanceTo(archEnemy.X, archEnemy.Y);
-            if(dist > me.CastRange*0.9) {
+            double dist = me.GetDistanceTo(archEnemy);
+            if(dist > me.CastRange * 0.9) {
                 Goal(true, archEnemy.X, archEnemy.Y);
                 return;
             }
@@ -182,16 +223,24 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         Grid grid;
 
-        void FollowMinions() {
-            LivingUnit fave = GetFave();
-            if(fave != null) {
-                Vector goal = CalcFaveNearPoint(fave, 0, 100);
-                TryToGo(goal.X, goal.Y);
+        bool BeatACreeps() {
+            attackNeutrals = true;
+            List<Minion> objects = world.Minions.Where(b => b.Faction == OppositeFaction || (attackNeutrals && b.Faction == Faction.Neutral)).ToList();
+
+            if(objects.Count != 0) {
+                var neutrals = GetNearEnemyUnits(3000);
+                if(neutrals != null) {
+                    var neu = neutrals.OrderBy(n => me.GetDistanceTo(n)).Last();
+                    TryToGo(neu.X, neu.Y);
+                    return true;
+                }
+                
             }
+            return false;
         }
         void Attack(LivingUnit archEnemy) {
             double angle = me.GetAngleTo(archEnemy);
-            var dist = archEnemy.GetDistanceTo(me.X, me.Y);
+            var dist = archEnemy.GetDistanceTo(me);
 
             if(Math.Abs(angle) > 0.01)
                 move.Turn = angle;
@@ -213,45 +262,49 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             try {
                 return world.Minions.OrderBy(m => m.GetDistanceTo(me)).First();
             }
-            catch { }
+            catch (Exception e){
+            }
             return null;
         }
         LivingUnit FindDanger() {
-            LivingUnit danger = GetClosestEnemyUnit();
-            if(danger != null && (me.Life < me.MaxLife * 0.5 && me.GetDistanceTo(danger.X, danger.Y) < me.CastRange ))
-                return danger;
+            List<LivingUnit> danger = GetNearEnemyUnits(me.VisionRange);
+            if(danger != null && danger.Count > 0)
+                return danger[0];
             return null;
+            //TODO calc danger units in order and local path to escape
+            //if(danger != null && (me.Life < me.MaxLife * 0.5 && me.GetDistanceTo(danger.X, danger.Y) < me.CastRange ))
+            //    return danger;
+            //return null;
         }
-        LivingUnit GetClosestEnemyUnit() {
+        List<LivingUnit> GetNearEnemyUnits(double range) {
             try {
                 List<LivingUnit> list = new List<LivingUnit>();
                 list.AddRange(world.Minions);
                 list.AddRange(world.Wizards);
                 list.AddRange(world.Buildings);
-
-                return list
-                    .Where(w => w.Faction != me.Faction || w.Faction == Faction.Neutral)
-                    .OrderBy(u => u.GetDistanceTo(me))
-                    .First();
+                var all = list.Where(
+                    w => w.Faction == OppositeFaction ||
+                    (w.Faction == Faction.Neutral && (w.Life < w.MaxLife || attackNeutrals)));
+                if(attackNeutrals && all.FirstOrDefault(u => u.Faction == OppositeFaction) != null)
+                    attackNeutrals = false;
+                return all.Where(u => u.GetDistanceTo(me.X, me.Y) <=range).ToList();
             }
-            catch { }
+            catch(Exception e) {
+            }
             return null;
         }
         LivingUnit FindArchEnemy() {
-            List<LivingUnit> enemiesList = new List<LivingUnit>();
-            enemiesList.AddRange(world.Minions);
-            enemiesList.AddRange(world.Wizards);
-            enemiesList.AddRange(world.Buildings);
-            try {
-                var enemies = enemiesList.Where(en => (en.Faction != me.Faction && en.Faction != Faction.Neutral && en.GetDistanceTo(me)<=me.VisionRange));
 
-                // now just find enimy with max value
+      
+                var enemies = GetNearEnemyUnits(me.VisionRange);
+                if(enemies == null)
+                    return null;
                 double bestValue = double.MinValue;
                 LivingUnit result = null;
                 foreach(var en in enemies) {
                     double HPfactor = 1.0 - (double)en.Life / en.MaxLife;
-                    var dist = en.GetDistanceTo(me); 
-                    double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 100/dist : dist * 100;
+                    var dist = en.GetDistanceTo(me);
+                    double distFactor = dist >= me.VisionRange ? -10 : dist >= en.Radius + me.Radius ? 100 / dist : dist * 100;
                     double typeFactor = GetTypeFactor(en);
 
                     double value = (HPfactor + typeFactor + distFactor) / 3.0;
@@ -261,9 +314,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     }
                 }
                 return result;
-            }
-            catch { }
-            return null;
+          
+         
         }
         double GetTypeFactor(LivingUnit en) {
             return 1;
@@ -296,18 +348,18 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             try {
                 CircularUnit obj = blocks.Where(b => b.Id != me.Id).OrderBy(u => u.GetDistanceTo(me)).First();
-                double minDist = me.Radius + obj.Radius + 20;
+                double minDist = me.Radius + obj.Radius + 50;
                 double angle = me.GetAngleTo(obj.X, obj.Y);
-                double dist = obj.GetDistanceTo(me.X, me.Y);
+                double dist = obj.GetDistanceTo(me);
                 if(Math.Abs(angle) <= Math.PI / 2 && dist <= minDist) {
-                    if(wallAroundcounter == 30) 
+                    if(wallAroundcounter == 30)
                         wallArounddir = -1;
 
                     if(wallAroundcounter == 0)
                         wallArounddir = 1;
 
-                    
-                        move.Speed = game.WizardForwardSpeed* wallArounddir;
+
+                    move.Speed = game.WizardForwardSpeed * wallArounddir;
 
                     wallAroundcounter += wallArounddir;
 
@@ -315,14 +367,15 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     return true;
                 }
             }
-            catch { };
-          //  wallAroundcounter = 0;
+            catch(Exception e) {
+            };
+            //  wallAroundcounter = 0;
             return false;
         }
         int wallAroundcounter = 0;
         int wallArounddir = 1;
     }
-    
+
     //public static class CpWalker {
 
     //    public static CheckpointList points;
