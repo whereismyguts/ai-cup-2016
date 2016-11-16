@@ -47,7 +47,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(cells.List.Count != objects.Count) {
                 CreateCells(objects);
                 units.AddRange(objects.Where(o => units.Find(u => u.Id == o.Id) == null));
-                CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "rev_" + objects.Count);
+            //    CreateBitmapAtRuntime(null, Point.Empty, Point.Empty, "rev_" + objects.Count);
             }
         }
 
@@ -62,7 +62,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 pathInCoord.Add(new Vector(cell.X * CellSize + CellSize / 2.0, cell.Y * CellSize + CellSize / 2.0));
             }
 
-            CreateBitmapAtRuntime(pathInCoord, start, end, "path_");
+           // CreateBitmapAtRuntime(pathInCoord, start, end, "path_");
             return pathInCoord;
         }
 
@@ -169,6 +169,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             List.Reverse();
         }
 
+        public void Remove(Point p) {
+            if(List.Contains(p))
+                List.Remove(p);
+        }
         public void Remove(int i) {
             List.RemoveAt(i);
         }
@@ -257,6 +261,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     }
     static class AStar {
         public static PointList FindPath(PointList field, Point start, Point goal) {
+         
+                field.Remove(goal);
+            field.Remove(start);
+
             // Шаг 1.
             var closedSet = new List<PathNode>();
             var openSet = new List<PathNode>();
