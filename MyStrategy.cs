@@ -77,7 +77,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
            public  List<CircularUnit> units = new List<CircularUnit>();
             public Cluster(CircularUnit obj1) {
                 units.Add(obj1);
-                Radius = 250;
                 UpdatePosition();
             }
             public Vector Position { get; internal set; }
@@ -90,17 +89,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             internal void AddUnit(CircularUnit obj1) {
                 units.Add(obj1);
                 UpdatePosition();
-                UpdateRadius();
             }
-            private void UpdateRadius() {
-                Radius = Math.Max(Radius, units.OrderBy(u => u.GetDistanceTo(Position.X, Position.Y)).Last().GetDistanceTo(Position.X, Position.Y));
-            }
-            private void UpdatePosition() {
+            
+            void UpdatePosition() {
                 Position = new Vector(units.Sum(u => u.X) / units.Count, units.Sum(u => u.Y) / units.Count);
             }
-            internal bool IsOwnerOf(CircularUnit obj1) {
-                return units.OrderBy(u => u.GetDistanceTo(obj1.X, obj1.Y)).Last().GetDistanceTo(obj1.X, obj1.Y) <= Radius;
-                //return Position.DistanceTo(obj1.X, obj1.Y) <= Radius;
+            internal bool IsOwnerOf(CircularUnit obj) {
+                foreach(var unit in units) {
+                    if(unit.GetDistanceTo(obj) <= Radius)
+                        return true;
+                }
+                return Position.DistanceTo(obj.X, obj.Y) <= Radius;
             }
         }
         class ClusterController {
