@@ -39,6 +39,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static void SmartAttack(UnitInfo attackTarget) {
             if(CanShoot()) {
+                Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit. Radius * 1.1;
+                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit. Radius * 1.1;
                 Kick(attackTarget, ActionType.MagicMissile);
             }
             else {
@@ -63,10 +65,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5;
         }
         static void SmartWalk(Vector goal) {
+            if(goal.IsEmpty)
+                return;
             Vector meToGoal = goal - new Vector(Me.X, Me.Y);
             Vector correctSpeed = meToGoal.SetLength(3.0);
-            Vector correctDir = correctSpeed.Rotate(Me.Angle);
-
+            Vector correctDir = correctSpeed.Rotate(-Me.Angle);
+          
             Move.Speed = correctDir.X;
             Move.StrafeSpeed = correctDir.Y;
             //Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
@@ -90,17 +94,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static bool WalkAround() {
             try {
                 UnitInfo obj = AllLivingUnits.Where(b => b.Unit.Id != Me.Id).FirstOrDefault(); // must be ordered 
-                double minDist = Me.Radius + obj.Unit.Radius + 50;
+                double minDist = Me.Radius + obj.Unit.Radius + 30;
                 double angle = Me.GetAngleTo(obj.Unit.X, obj.Unit.Y);
 
                 if(Math.Abs(angle) <= Math.PI  && obj.Distance <= minDist) {
 
                     if(walkAroundcounter == 30)
-                        walkArounddir = -1;
+                        walkArounddir = -2;
                     if(walkAroundcounter == 0)
                         walkArounddir = 1;
                     Move.Speed = Game.WizardForwardSpeed * walkArounddir;
-                    walkAroundcounter += walkArounddir;
+                    walkAroundcounter += walkArounddir/ Math.Abs( walkArounddir);
 
                     Move.Turn = -angle;
                     return true;
@@ -126,9 +130,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static Vector CalcMoveTarget() {
             switch(problem) {
                 case Problem.Attack:
-                    return CalcOptimalLocalPoint(Me.CastRange * 0.8);
+                    return CalcOptimalLocalPoint(Me.CastRange*0.5);
                 case Problem.Run:
-                    return CalcOptimalLocalPoint(Me.VisionRange * 0.8);
+                    return CalcOptimalLocalPoint(Me.CastRange );
                 case Problem.Push:
                     return CalcLanePoint();
                 case Problem.Defend:
@@ -145,15 +149,16 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         }
         static Vector CalcOptimalLocalPoint(double safeDist) {
+           // return new Vector();
             var blocks = AllLivingUnits.Where(u => u.Distance <= Me.VisionRange).ToList(); // must be order
 
 
             Vector result = new Vector(); ;
             double bestValue = double.MinValue;
 
-            double rMax = Me.VisionRange ;
-            double rMin = Me.Radius + safeDist;
-            double rStep = Me.VisionRange / 5.0;
+            double rMax = Me.CastRange/2 ;
+            double rMin = Me.Radius ;
+            double rStep = Me.CastRange / 5.0;
 
 
             for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 8)
@@ -162,15 +167,18 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                         Me.X + r * Math.Cos(fi),
                         Me.Y + r * Math.Sin(fi));
 
-                    double value = blocks.Sum(b => b.DotValueInFight(dot));
+                    if(dot.X < 50 || dot.X > 3950|| dot.Y < 50 || dot.Y > 3950)
+                        continue;
+
+                    double value = blocks.Sum(b => b.DotValueInFight(dot, safeDist));
 
                     if(value > bestValue) {
                         result = dot;
                         bestValue = value;
                     }
                 }
-            //if(!result.IsEmpty)
-            //    DrawOptimalPoint(result, blocks);
+           //if(!result.IsEmpty)
+           //     DrawOptimalPoint(result, blocks);
 
             return result.IsEmpty ? new Vector(2000, 2000) : result;
         }
@@ -242,7 +250,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
     }
     class UnitInfo {
-        public static LivingUnit Me { get; set; }
+        public static Wizard Me { get; set; }
         public LivingUnit Unit { get; internal set; }
         public double Distance { get; internal set; }
         public static bool ShouldInit { get; set; }
@@ -270,10 +278,20 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         internal double DotValueInFight(Vector dot) {
             //TODo: include ray!
-            return Unit.GetDistanceTo(dot.X, dot.Y)  * (IsEnemy ? 0.1 : 2);
+            
+            return 1000/Unit.GetDistanceTo(dot.X, dot.Y)  + (IsEnemy ? -1 : Distance) ;
         }
         public override string ToString() {
             return Unit.Faction.ToString() + " " + Unit.GetType().Name + ", d:" + Distance;
+        }
+
+        internal double DotValueInFight(Vector dot, double safeDist) {
+            var dist = Unit.GetDistanceTo(dot.X, dot.Y);
+            if(IsEnemy && dist < safeDist)
+                return -10000;
+            if(IsEnemy && dist <= Me.CastRange*0.7  && dist >= safeDist)
+                return 100000;
+            return dist;
         }
     }
 }
