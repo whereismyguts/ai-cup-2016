@@ -2,6 +2,8 @@
 using Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk.Model;
 using System.Collections.Generic;
 using System.Linq;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     public enum State { InBattle, LookFor };
@@ -37,23 +39,26 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static void SmartAttack(UnitInfo attackTarget) {
             if(CanShoot()) {
-                double angle = Me.GetAngleTo(attackTarget.Unit);
-                if(angle <= 0.01)
-                    Move.Action = ActionType.MagicMissile;
-                else
-                    Move.Turn = angle;
+                Kick(attackTarget, ActionType.MagicMissile);
             }
             else {
                 var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius * 1.5);
                 if(near != null) {
-                    double angle = Me.GetAngleTo(attackTarget.Unit);
-                    if(angle <= 0.01)
-                        Move.Action = ActionType.Staff;
-                    else
-                        Move.Turn = angle;
+                    Kick(near, ActionType.Staff);
                 }
+                else
+                    Kick(attackTarget, ActionType.None);
             }
         }
+
+        private static void Kick(UnitInfo target, ActionType type) {
+            double angle = Me.GetAngleTo(target.Unit);
+            if(Math.Abs( angle) <= 0.01)
+                Move.Action = type;
+            else
+                Move.Turn = angle;
+        }
+
         static bool CanShoot() {
             return Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5;
         }
@@ -64,7 +69,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             Move.Speed = correctDir.X;
             Move.StrafeSpeed = correctDir.Y;
-            Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
+            //Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
         }
         static void GoSimple(Vector goal) {
             if(grid != null) {
@@ -84,11 +89,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static bool WalkAround() {
             try {
-                UnitInfo obj = AllLivingUnits.Where(b => b.Unit.Id != Me.Id).LastOrDefault(); // must be ordered 
+                UnitInfo obj = AllLivingUnits.Where(b => b.Unit.Id != Me.Id).FirstOrDefault(); // must be ordered 
                 double minDist = Me.Radius + obj.Unit.Radius + 50;
                 double angle = Me.GetAngleTo(obj.Unit.X, obj.Unit.Y);
 
-                if(Math.Abs(angle) <= Math.PI / 2 && obj.Distance <= minDist) {
+                if(Math.Abs(angle) <= Math.PI  && obj.Distance <= minDist) {
 
                     if(walkAroundcounter == 30)
                         walkArounddir = -1;
@@ -114,8 +119,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0)
-                return EnemyUnitsInFight.Last(); // mist be ordered
-            var tree = AllLivingUnits.FindLast(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
+                return EnemyUnitsInFight.FirstOrDefault(); // mist be ordered
+            var tree = AllLivingUnits.Find(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
             return tree;
         }
         static Vector CalcMoveTarget() {
@@ -133,7 +138,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         }
         static Vector CalcLanePoint() {
-            return new Vector(2000, 2000);
+
+            var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
+
+            return en == null? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
+
         }
         static Vector CalcOptimalLocalPoint(double safeDist) {
             var blocks = AllLivingUnits.Where(u => u.Distance <= Me.VisionRange).ToList(); // must be order
@@ -142,7 +151,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Vector result = new Vector(); ;
             double bestValue = double.MinValue;
 
-            double rMax = Me.VisionRange * 1.5;
+            double rMax = Me.VisionRange ;
             double rMin = Me.Radius + safeDist;
             double rStep = Me.VisionRange / 5.0;
 
@@ -160,8 +169,34 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                         bestValue = value;
                     }
                 }
+            //if(!result.IsEmpty)
+            //    DrawOptimalPoint(result, blocks);
+
             return result.IsEmpty ? new Vector(2000, 2000) : result;
         }
+
+        private static void DrawOptimalPoint(Vector result, List<UnitInfo> blocks) {
+          //  Point zero = new Point((int)Me.X, (int)Me.Y);
+            float maxx = (float)(blocks.OrderBy(b => b.Unit.X).Last().Unit.X);
+            float minx = (float)( blocks.OrderBy(b => b.Unit.X).First().Unit.X);
+            float miny = (float)( blocks.OrderBy(b => b.Unit.Y).First().Unit.Y);
+            float maxy = (float)(blocks.OrderBy(b => b.Unit.Y).Last().Unit.Y);
+
+
+            Bitmap bmp = new Bitmap((int)(maxx-minx)+100,(int)( maxy-miny)+100);
+            Graphics gr = Graphics.FromImage(bmp);
+
+            blocks.Add(new UnitInfo(Me));
+
+            foreach(var bl in blocks) {
+                gr.DrawEllipse(bl.IsEnemy? Pens.Red : bl.Unit.Id == Me.Id ? Pens.Green : bl.Unit.Faction == Faction.Other ? Pens.GreenYellow : Pens.Gray,
+                    (float)bl.Unit.X - minx, (float)bl.Unit.Y - miny, (float)bl.Unit.Radius, (float)bl.Unit.Radius);
+            }
+            gr.DrawLine(Pens.White, (float)result.X - minx - 5, (float)result.Y - miny - 5, (maxx - minx)/2, (maxy - miny)/2);
+            bmp.Save("local.png", ImageFormat.Png);
+
+        }
+
         static Problem CalcProblem() {
             if(inBattle) {
                 return Me.Life < Me.MaxLife * 0.5 || DangerPlace() ? Problem.Run : Problem.Attack;
@@ -193,8 +228,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             objects.AddRange(World.Trees);
             objects.AddRange(World.Buildings);
 
-            AllLivingUnits = objects.Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
-            EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).ToList();
+            AllLivingUnits = objects.Where(u=>u.Id!=Me.Id).Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
+            EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).OrderBy(u=>u.Distance).ToList();
         }
         static void UpdateMap() {
             var objects = new List<CircularUnit>();
@@ -235,7 +270,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         internal double DotValueInFight(Vector dot) {
             //TODo: include ray!
-            return Distance * Distance / Unit.Life * (IsEnemy ? 1 : 2);
+            return Unit.GetDistanceTo(dot.X, dot.Y)  * (IsEnemy ? 0.1 : 2);
         }
         public override string ToString() {
             return Unit.Faction.ToString() + " " + Unit.GetType().Name + ", d:" + Distance;

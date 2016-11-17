@@ -230,7 +230,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         public Vector SetLength(double length) {
-            return this * DistanceTo(0, 0);
+            return this / DistanceTo(0, 0) * length;
         }
 
         internal double DistanceTo(double x, double y) {
