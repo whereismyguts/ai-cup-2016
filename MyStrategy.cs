@@ -33,7 +33,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 OppositeFaction = me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
             }
 
+            AI.MakeMove(me, world, game, move);
+            return;
             UpdateMap();
+
             if(me.Life < me.MaxLife * 0.5) {
                 LivingUnit runFrom = FindDanger(); //TODO make separate logic block with loacl pathfinding to escape
                 if(runFrom != null && runFrom.GetDistanceTo(me) <= me.VisionRange ) {

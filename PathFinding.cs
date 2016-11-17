@@ -51,7 +51,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
         }
 
-        public List<Vector> GetPath(Point start, Point end) {
+        List<Vector> GetPath(Point start, Point end) {
             // var max = (int)Math.Ceiling(4000 / cellSize);
             PointList pathInCells = AStar.FindPath(cells, start, end);
             if(pathInCells == null) {
