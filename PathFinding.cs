@@ -214,7 +214,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.X = x;
             this.Y = y;
         }
-
+        public Vector Rotate( double rad) {
+            double x = X * Math.Cos(rad) - Y * Math.Sin(rad);
+            double y = X * Math.Sin(rad) + Y * Math.Cos(rad);
+            return new Vector(x,y);
+        }
         public bool IsEmpty { get { return X == 0 && Y == 0; } }
         public double X { get; set; }
         public double Y { get; set; }
@@ -225,6 +229,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return Math.Sqrt(dx * dx + dy * dy);
         }
 
+        public Vector SetLength(double length) {
+            return this * DistanceTo(0, 0);
+        }
+
         internal double DistanceTo(double x, double y) {
             double dx = X - x;
             double dy = Y - y;
@@ -233,6 +241,15 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         public static Vector operator /(Vector c1, double f) {
             return new Vector(c1.X / f, c1.Y / f);
+        }
+        public static Vector operator *(Vector c1, double f) {
+            return new Vector(c1.X * f, c1.Y * f);
+        }
+        public static Vector operator +(Vector c1, Vector c2) {
+            return new Vector(c1.X + c2.X, c1.Y + c2.Y);
+        }
+        public static Vector operator -(Vector c1, Vector c2) {
+            return new Vector(c1.X - c2.X, c1.Y - c2.Y);
         }
 
     }

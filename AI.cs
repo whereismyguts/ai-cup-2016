@@ -26,7 +26,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             ProcessTargets(); //4th level
         }
 
-        private static void ProcessTargets() {
+        static void ProcessTargets() {
             if(attackTarget != null) {
                 SmartAttack(attackTarget);
                 SmartWalk(moveTarget);
@@ -35,8 +35,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 GoSimple(moveTarget);
             }
         }
-
-        private static void SmartAttack(UnitInfo attackTarget) {
+        static void SmartAttack(UnitInfo attackTarget) {
             if(CanShoot()) {
                 double angle = Me.GetAngleTo(attackTarget.Unit);
                 if(angle <= 0.01)
@@ -45,7 +44,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     Move.Turn = angle;
             }
             else {
-                var near = EnemyUnitsInFight.FirstOrDefault(e=>e.Distance<=Me.Radius*1.5);
+                var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius * 1.5);
                 if(near != null) {
                     double angle = Me.GetAngleTo(attackTarget.Unit);
                     if(angle <= 0.01)
@@ -55,16 +54,19 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 }
             }
         }
-
-        private static bool CanShoot() {
-            return Me.RemainingActionCooldownTicks <5  && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5;
+        static bool CanShoot() {
+            return Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5;
         }
+        static void SmartWalk(Vector goal) {
+            Vector meToGoal = goal - new Vector(Me.X, Me.Y);
+            Vector correctSpeed = meToGoal.SetLength(3.0);
+            Vector correctDir = correctSpeed.Rotate(Me.Angle);
 
-        private static void SmartWalk(Vector moveTarget) {
-            throw new NotImplementedException();
+            Move.Speed = correctDir.X;
+            Move.StrafeSpeed = correctDir.Y;
+            Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
         }
-
-        private static void GoSimple(Vector goal) {
+        static void GoSimple(Vector goal) {
             if(grid != null) {
                 var path = grid.GetPath(Me.X, Me.Y, moveTarget.X, moveTarget.Y);
                 if(path != null && path.Count > 1) {
@@ -74,15 +76,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
             GoStupid(goal.X, goal.Y);
         }
-
-        private static void GoStupid(double x, double y) {
+        static void GoStupid(double x, double y) {
             if(WalkAround())
                 return;
             Move.Turn = Me.GetAngleTo(x, y);
             Move.Speed = Game.WizardForwardSpeed;
         }
-
-
         static bool WalkAround() {
             try {
                 UnitInfo obj = AllLivingUnits.Where(b => b.Unit.Id != Me.Id).LastOrDefault(); // must be ordered 
@@ -109,22 +108,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static int walkAroundcounter = 0;
         static int walkArounddir = 1;
-
-
-
-        private static void CalcTargets() {
+        static void CalcTargets() {
             moveTarget = CalcMoveTarget();
             attackTarget = CalcAttackTarget();
         }
-
-        private static UnitInfo CalcAttackTarget() {
+        static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0)
                 return EnemyUnitsInFight.Last(); // mist be ordered
             var tree = AllLivingUnits.FindLast(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
             return tree;
         }
-
-        private static Vector CalcMoveTarget() {
+        static Vector CalcMoveTarget() {
             switch(problem) {
                 case Problem.Attack:
                     return CalcOptimalLocalPoint(Me.CastRange * 0.8);
@@ -138,12 +132,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return new Vector(2000, 2000);
 
         }
-
         static Vector CalcLanePoint() {
             return new Vector(2000, 2000);
         }
-
-        private static Vector CalcOptimalLocalPoint(double safeDist) {
+        static Vector CalcOptimalLocalPoint(double safeDist) {
             var blocks = AllLivingUnits.Where(u => u.Distance <= Me.VisionRange).ToList(); // must be order
 
 
@@ -170,33 +162,28 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 }
             return result.IsEmpty ? new Vector(2000, 2000) : result;
         }
-
-        private static Problem CalcProblem() {
+        static Problem CalcProblem() {
             if(inBattle) {
                 return Me.Life < Me.MaxLife * 0.5 || DangerPlace() ? Problem.Run : Problem.Attack;
             }
             return Problem.Push; // TODo add defend
         }
-
-        private static bool DangerPlace() {
+        static bool DangerPlace() {
             var friendlyUnitsNear = AllLivingUnits.Where(
                 u => u.Unit.Faction == Me.Faction &&
                 u.Distance < Me.VisionRange / 0.7
             ).ToList();
             return friendlyUnitsNear == null || EnemyUnitsInFight.Count - friendlyUnitsNear.Count > 3;
         }
-
-        private static bool InBattle() {
+        static bool InBattle() {
             return EnemyUnitsInFight.Count > 0;
         }
-
         static void InitializeTick(Wizard me, World world, Game game, Move move) {
             Me = me;
             World = world;
             Game = game;
             Move = move;
         }
-
         static void GatherInfo() {
             UnitInfo.Me = Me; UnitInfo.SetParams();
 
@@ -218,8 +205,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             else
                 grid.Reveal(objects);
         }
-
-
     }
     class UnitInfo {
         public static LivingUnit Me { get; set; }
@@ -248,11 +233,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             TheirBase = Me.Faction == Faction.Renegades ? new Vector(600, 3390) : new Vector(3390, 600);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
         }
-
         internal double DotValueInFight(Vector dot) {
+            //TODo: include ray!
             return Distance * Distance / Unit.Life * (IsEnemy ? 1 : 2);
         }
-
         public override string ToString() {
             return Unit.Faction.ToString() + " " + Unit.GetType().Name + ", d:" + Distance;
         }
