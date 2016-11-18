@@ -242,6 +242,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             double cos = p1.X * p2.X + p1.Y * p2.Y;
             return Math.Atan2(sin, cos);
         }
+
+        internal Point toPoint() {
+            return new Point((int)X, (int)Y);
+        }
+
         public static Vector operator /(Vector c1, double f) {
             return new Vector(c1.X / f, c1.Y / f);
         }
