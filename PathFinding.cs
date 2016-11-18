@@ -57,7 +57,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(pathInCells == null) {
                 // CreateBitmapAtRuntime(null, start, end, "path_");
                 return null;
-        }
+            }
             pathInCells = Opimize(pathInCells);
             List<Vector> pathInCoord = new List<Vector>();
             foreach(Point cell in pathInCells.List) {
@@ -141,8 +141,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         PointList cells = new PointList();
-        public PointList Cells
-        {
+        public PointList Cells {
             get { return cells; }
         }
         //PointList path = new PointList();
@@ -214,10 +213,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             this.X = x;
             this.Y = y;
         }
-        public Vector Rotate( double rad) {
+        public Vector Rotate(double rad) {
             double x = X * Math.Cos(rad) - Y * Math.Sin(rad);
             double y = X * Math.Sin(rad) + Y * Math.Cos(rad);
-            return new Vector(x,y);
+            return new Vector(x, y);
         }
         public bool IsEmpty { get { return X == 0 && Y == 0; } }
         public double X { get; set; }
@@ -238,7 +237,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             double dy = Y - y;
             return Math.Sqrt(dx * dx + dy * dy);
         }
-
+        internal static double Angle(Vector p1, Vector p2) {
+            double sin = p1.X * p2.Y - p2.X * p1.Y;
+            double cos = p1.X * p2.X + p1.Y * p2.Y;
+            return Math.Atan2(sin, cos);
+        }
         public static Vector operator /(Vector c1, double f) {
             return new Vector(c1.X / f, c1.Y / f);
         }
@@ -251,12 +254,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public static Vector operator -(Vector c1, Vector c2) {
             return new Vector(c1.X - c2.X, c1.Y - c2.Y);
         }
-
     }
     public struct Point {
         public static Point Empty { get { return new Point(); } }
-        public bool IsEmpty
-        {
+        public bool IsEmpty {
             get { return X == 0 && Y == 0; }
         }
         //public override bool Equals(object obj) {
@@ -399,10 +400,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         // Примерное расстояние до цели (H).
         public int HeuristicEstimatePathLength { get; set; }
         // Ожидаемое полное расстояние до цели (F).
-        public int EstimateFullPathLength
-        {
-            get
-            {
+        public int EstimateFullPathLength {
+            get {
                 return this.PathLengthFromStart + this.HeuristicEstimatePathLength;
             }
         }

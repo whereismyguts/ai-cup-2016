@@ -39,8 +39,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static void SmartAttack(UnitInfo attackTarget) {
             if(CanShoot()) {
-                Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit. Radius * 1.1;
-                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit. Radius * 1.1;
+                Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit.Radius * 1.1;
+                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit.Radius * 1.1;
                 Kick(attackTarget, ActionType.MagicMissile);
             }
             else {
@@ -55,7 +55,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         private static void Kick(UnitInfo target, ActionType type) {
             double angle = Me.GetAngleTo(target.Unit);
-            if(Math.Abs( angle) <= 0.01)
+            if(Math.Abs(angle) <= 0.01)
                 Move.Action = type;
             else
                 Move.Turn = angle;
@@ -70,7 +70,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Vector meToGoal = goal - new Vector(Me.X, Me.Y);
             Vector correctSpeed = meToGoal.SetLength(3.0);
             Vector correctDir = correctSpeed.Rotate(-Me.Angle);
-          
+
             Move.Speed = correctDir.X;
             Move.StrafeSpeed = correctDir.Y;
             //Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
@@ -97,14 +97,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 double minDist = Me.Radius + obj.Unit.Radius + 30;
                 double angle = Me.GetAngleTo(obj.Unit.X, obj.Unit.Y);
 
-                if(Math.Abs(angle) <= Math.PI  && obj.Distance <= minDist) {
+                if(Math.Abs(angle) <= Math.PI && obj.Distance <= minDist) {
 
                     if(walkAroundcounter == 30)
                         walkArounddir = -2;
                     if(walkAroundcounter == 0)
                         walkArounddir = 1;
                     Move.Speed = Game.WizardForwardSpeed * walkArounddir;
-                    walkAroundcounter += walkArounddir/ Math.Abs( walkArounddir);
+                    walkAroundcounter += walkArounddir / Math.Abs(walkArounddir);
 
                     Move.Turn = -angle;
                     return true;
@@ -130,9 +130,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static Vector CalcMoveTarget() {
             switch(problem) {
                 case Problem.Attack:
-                    return CalcOptimalLocalPoint(Me.CastRange*0.5);
+                    return CalcOptimalLocalPoint(Me.CastRange * 0.5);
                 case Problem.Run:
-                    return CalcOptimalLocalPoint(Me.CastRange );
+                    return CalcOptimalLocalPoint(Me.CastRange);
                 case Problem.Push:
                     return CalcLanePoint();
                 case Problem.Defend:
@@ -145,62 +145,65 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
 
-            return en == null? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
+            return en == null ? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
 
         }
         static Vector CalcOptimalLocalPoint(double safeDist) {
-           // return new Vector();
+            // return new Vector();
             var blocks = AllLivingUnits.Where(u => u.Distance <= Me.VisionRange).ToList(); // must be order
 
 
             Vector result = new Vector(); ;
             double bestValue = double.MinValue;
 
-            double rMax = Me.CastRange/2 ;
-            double rMin = Me.Radius ;
-            double rStep = Me.CastRange / 5.0;
+            //double rMax = Me.CastRange/2 ;
+            double rMin = Me.Radius;
+            double rStep = Me.Radius;
 
 
-            for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 8)
-                for(double r = rMin; r < rMax; r += rStep) {
-                    Vector dot = new Vector(
-                        Me.X + r * Math.Cos(fi),
-                        Me.Y + r * Math.Sin(fi));
+            double R = rMin + rStep;
 
-                    if(dot.X < 50 || dot.X > 3950|| dot.Y < 50 || dot.Y > 3950)
-                        continue;
+            for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 24) {
+                Vector dot = new Vector(
+                    Me.X + R * Math.Cos(fi),
+                    Me.Y + R * Math.Sin(fi));
+                if(dot.X < 50 || dot.X > 3950 || dot.Y < 50 || dot.Y > 3950)
+                    continue;
 
-                    double value = blocks.Sum(b => b.DotValueInFight(dot, safeDist));
+                double dAverage = blocks.Sum(u => u.Unit.GetDistanceTo(dot.X, dot.Y)) / blocks.Count;
 
-                    if(value > bestValue) {
-                        result = dot;
-                        bestValue = value;
-                    }
+                List<double> values = blocks.Select(b => b.DotValueInFight(dot, safeDist, dAverage)).ToList();
+                double value = values.Aggregate((p, x) => p *= x); 
+
+                if(value > bestValue) {
+                    result = dot;
+                    bestValue = value;
                 }
-           //if(!result.IsEmpty)
-           //     DrawOptimalPoint(result, blocks);
+            }
+            //if(!result.IsEmpty)
+            //     DrawOptimalPoint(result, blocks);
 
-            return result.IsEmpty ? new Vector(2000, 2000) : result;
+            return result.IsEmpty ? UnitInfo.HomeBase : result;
         }
 
         private static void DrawOptimalPoint(Vector result, List<UnitInfo> blocks) {
-          //  Point zero = new Point((int)Me.X, (int)Me.Y);
+            //  Point zero = new Point((int)Me.X, (int)Me.Y);
             float maxx = (float)(blocks.OrderBy(b => b.Unit.X).Last().Unit.X);
-            float minx = (float)( blocks.OrderBy(b => b.Unit.X).First().Unit.X);
-            float miny = (float)( blocks.OrderBy(b => b.Unit.Y).First().Unit.Y);
+            float minx = (float)(blocks.OrderBy(b => b.Unit.X).First().Unit.X);
+            float miny = (float)(blocks.OrderBy(b => b.Unit.Y).First().Unit.Y);
             float maxy = (float)(blocks.OrderBy(b => b.Unit.Y).Last().Unit.Y);
 
 
-            Bitmap bmp = new Bitmap((int)(maxx-minx)+100,(int)( maxy-miny)+100);
+            Bitmap bmp = new Bitmap((int)(maxx - minx) + 100, (int)(maxy - miny) + 100);
             Graphics gr = Graphics.FromImage(bmp);
 
             blocks.Add(new UnitInfo(Me));
 
             foreach(var bl in blocks) {
-                gr.DrawEllipse(bl.IsEnemy? Pens.Red : bl.Unit.Id == Me.Id ? Pens.Green : bl.Unit.Faction == Faction.Other ? Pens.GreenYellow : Pens.Gray,
+                gr.DrawEllipse(bl.IsEnemy ? Pens.Red : bl.Unit.Id == Me.Id ? Pens.Green : bl.Unit.Faction == Faction.Other ? Pens.GreenYellow : Pens.Gray,
                     (float)bl.Unit.X - minx, (float)bl.Unit.Y - miny, (float)bl.Unit.Radius, (float)bl.Unit.Radius);
             }
-            gr.DrawLine(Pens.White, (float)result.X - minx - 5, (float)result.Y - miny - 5, (maxx - minx)/2, (maxy - miny)/2);
+            gr.DrawLine(Pens.White, (float)result.X - minx - 5, (float)result.Y - miny - 5, (float)(Me.X - minx), (float)(Me.X - miny) );
             bmp.Save("local.png", ImageFormat.Png);
 
         }
@@ -236,8 +239,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             objects.AddRange(World.Trees);
             objects.AddRange(World.Buildings);
 
-            AllLivingUnits = objects.Where(u=>u.Id!=Me.Id).Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
-            EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).OrderBy(u=>u.Distance).ToList();
+            AllLivingUnits = objects.Where(u => u.Id != Me.Id).Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
+            EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).OrderBy(u => u.Distance).ToList();
         }
         static void UpdateMap() {
             var objects = new List<CircularUnit>();
@@ -278,20 +281,49 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         internal double DotValueInFight(Vector dot) {
             //TODo: include ray!
-            
-            return 1000/Unit.GetDistanceTo(dot.X, dot.Y)  + (IsEnemy ? -1 : Distance) ;
+
+            return 1000 / Unit.GetDistanceTo(dot.X, dot.Y) + (IsEnemy ? -1 : Distance);
         }
         public override string ToString() {
             return Unit.Faction.ToString() + " " + Unit.GetType().Name + ", d:" + Distance;
         }
 
-        internal double DotValueInFight(Vector dot, double safeDist) {
-            var dist = Unit.GetDistanceTo(dot.X, dot.Y);
-            if(IsEnemy && dist < safeDist)
-                return -10000;
-            if(IsEnemy && dist <= Me.CastRange*0.7  && dist >= safeDist)
-                return 100000;
-            return dist;
+
+        internal double DotValueInFight(Vector dot, double safeDist, double dAverage) {
+            double dist = dot.DistanceTo(Unit.X, Unit.Y);
+            double vAvoid = IsEnemy ? 0 :
+                dAverage / (dAverage - dist);
+            double vSafe = dist < safeDist || dist > Me.CastRange ? 0 : 1;
+            double vRay = IsTripleRayInterSectsSomeone(dot) ? 0 : 1;
+
+            return vAvoid * vRay * vSafe;
+        }
+
+        private bool IsTripleRayInterSectsSomeone(Vector dot) {
+            double deg90 = Math.PI / 2;
+            Vector me = new Vector(Me.X, Me.Y);
+
+            Vector Ray = dot - me;
+            Vector Lm = Ray.Rotate(deg90).SetLength(Me.Radius * 1.5);
+            Vector Rm = Ray.Rotate(-deg90).SetLength(Me.Radius * 1.5);
+
+            Vector yar = me - dot;
+            Vector Ld = Ray.Rotate(-deg90).SetLength(Me.Radius * 1.5);
+            Vector Rd = Ray.Rotate(deg90).SetLength(Me.Radius * 1.5);
+
+            Vector RayL = Ld - Lm;
+            Vector RayR = Rd - Rm;
+
+            return IsRayIntersectsCircle(me, me + Ray, dot, Me.Radius * 2) ||
+                IsRayIntersectsCircle(me + Lm, me + RayL, dot, Me.Radius * 2) ||
+                IsRayIntersectsCircle(me + Rm, me + RayR, dot, Me.Radius * 2);
+
+        }
+
+        private bool IsRayIntersectsCircle(Vector v0, Vector v1, Vector center, double r) {
+            double alfa = Vector.Angle((center - v0), (v1 - v0));
+            double distFromCenterToRay = (center - v0).DistanceTo(0, 0); // length
+            return r >= distFromCenterToRay * Math.Cos(alfa);
         }
     }
 }
