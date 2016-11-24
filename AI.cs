@@ -283,11 +283,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             World = world;
             Game = game;
             Move = move;
+            UnitInfo.Me = Me;
+
+            if(UnitInfo.ShouldInit)
+                UnitInfo.SetParams();    
         }
         static void GatherInfo() {
-            UnitInfo.Me = Me; UnitInfo.SetParams();
-            UnitInfo.Game = Game;
-
             UpdateMap();
             List<LivingUnit> objects = new List<LivingUnit>(World.Wizards);
             objects.AddRange(World.Minions);
@@ -312,10 +313,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public static Game Game { get; set; }
         public LivingUnit Unit { get; internal set; }
         public double Distance { get; internal set; }
-        public static bool ShouldInit { get; set; }
+        public static bool ShouldInit { get; set; } = true;
         public static bool AttackNeutrals { get; set; } = false;
         public static Vector HomeBase { get; set; }
-        public static Vector TheirBase { get; set; }
+      //  public static Vector TheirBase { get; set; }
         public static Faction They { get; set; }
         public bool IsEnemy {
             get {
@@ -334,9 +335,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         internal static void SetParams() {
-            HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
-            TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
+            HomeBase = new Vector(Me.X, Me.Y);
+           // HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
+            //TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
+            ShouldInit = false;
         }
         internal double DotValueInFight(Vector dot) {
             //TODo: include ray!
