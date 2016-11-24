@@ -31,12 +31,35 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static void ProcessTargets() {
             if(attackTarget != null) {
                 SmartAttack(attackTarget);
+
+                moveTarget = CorrectByPotention(moveTarget);
+
                 SmartWalk(moveTarget);
             }
             else {
                 GoSimple(moveTarget);
             }
         }
+
+        private static Vector CorrectByPotention(Vector goal) {
+           
+            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.5 + u.Unit.Radius).ToList();
+
+            if(nearBlocks.Count > 0) {
+                // Vector oldDir = goal - new Vector(Me.X, Me.Y);
+                Vector newDir = new Vector();
+                foreach(UnitInfo unit in nearBlocks) {
+                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y);
+                    newDir += addForce;
+                }
+
+                return new Vector(Me.X,Me.Y) + newDir;
+            }
+
+
+            return goal;
+        }
+
         static void SmartAttack(UnitInfo attackTarget) {
             if(CanShoot()) {
                 Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit.Radius * 1.1;
@@ -86,9 +109,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             GoStupid(goal.X, goal.Y);
         }
         static void GoStupid(double x, double y) {
-            if(WalkAround())
-                return;
-            Move.Turn = Me.GetAngleTo(x, y);
+            //if(WalkAround())
+            //    return;
+
+            Vector goal = CorrectByPotention(new Vector(x, y));
+            Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
             Move.Speed = Game.WizardForwardSpeed;
         }
         static bool WalkAround() {
@@ -117,8 +142,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static int walkAroundcounter = 0;
         static int walkArounddir = 1;
         static void CalcTargets() {
-            moveTarget = CalcMoveTarget();
             attackTarget = CalcAttackTarget();
+            moveTarget = CalcMoveTarget();
+         //   DrawOptimalPoint(moveTarget, AllLivingUnits,null,null);
+           
         }
         static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0)
@@ -151,42 +178,58 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static Vector CalcOptimalLocalPoint(bool run) {
             // return new Vector();
+            
             var blocks = AllLivingUnits.Where(u => u.Distance < Me.CastRange).ToList(); // must be order
 
+            var enemies = blocks.Where(u => u.IsEnemy).ToList();
 
-            Vector result = new Vector(); ;
-            double bestValue = 0;
+            if(enemies.Count == 1 && Me.Life<Me.MaxLife/2) {
+                return UnitInfo.HomeBase;
+            }
+            var other = blocks.Where(u => !u.IsEnemy);
 
-            //double rMax = Me.CastRange/2 ;
-            double rMin = Me.Radius;
+            var myPosition = new Vector(Me.X, Me.Y);
+
+            double rMax = Me.CastRange;
+           
             double rStep = Me.Radius;
 
+            double safeDistance = run ? Me.CastRange*1.1 : Me.CastRange / 2;
 
-            double R = rMin + rStep;
-            List<double> dotvalues = new List<double>();
             List<Vector> dots = new List<Vector>();
-            for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 24) {
-                Vector dot = new Vector(
-                    Me.X + R * Math.Cos(fi),
-                    Me.Y + R * Math.Sin(fi));
-                if(dot.X < 50 || dot.X > 3950 || dot.Y < 50 || dot.Y > 3950)
-                    continue;
+            for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
+                for(double Ry = -rMax; Ry <= rMax; Ry += rStep)
+                    dots.Add(new Vector(
+                        Me.X + Rx,
+                        Me.Y + Ry));
 
-                double dAverage = blocks.Sum(u => u.Unit.GetDistanceTo(dot.X, dot.Y)) / blocks.Count;
+            dots = dots.OrderBy(d => d.DistanceTo(UnitInfo.HomeBase)).ToList();
+            foreach(var dot in dots)
+                    {
+                    //for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 24) {
+                   
+                    if(dot.X < 50 || dot.X > 3950 || dot.Y < 50 || dot.Y > 3950)
+                        continue;
+                    UnitInfo danger = enemies.FirstOrDefault(u=> dot.DistanceTo(u.Position) < Me.Radius+safeDistance);
+                    if(danger != null)
+                        continue;
+                    UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius +u.Unit.Radius* 1.1);
+                    if(block != null)
+                        continue;
+                if(attackTarget != null) {
+                  
 
-                var values = blocks.Select(b => b.DotValueInFight(dot, run, dAverage)).ToList();
-                double value = values.Sum() / values.Count;
-                dotvalues.Add(value);
-                dots.Add(dot);
-                if(value > bestValue) {
-                    result = dot;
-                    bestValue = value;
+                    if(dot.DistanceTo(attackTarget.Position) > Me.CastRange * 0.8)
+                        continue;
                 }
-            }
-            //if(!result.IsEmpty)
-            //    DrawOptimalPoint(result, blocks, dots, dotvalues);
 
-            return result.IsEmpty ? UnitInfo.HomeBase : result;
+
+                    return dot;
+                }
+
+            return UnitInfo.HomeBase;
+            
+
         }
 
         private static void DrawOptimalPoint(Vector result, List<UnitInfo> blocks, List<Vector> dots, List<double> vals) {
@@ -197,39 +240,31 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             float maxy = (float)(blocks.OrderBy(b => b.Unit.Y).Last().Unit.Y);
 
 
-            Bitmap bmp = new Bitmap((int)(maxx - minx) + 100, (int)(maxy - miny) + 100);
+            Bitmap bmp = new Bitmap((int)(maxx - minx) + 50, (int)(maxy - miny) + 50);
             Graphics gr = Graphics.FromImage(bmp);
 
             blocks.Add(new UnitInfo(Me));
 
             foreach(var bl in blocks) {
-                gr.DrawEllipse(bl.IsEnemy ? Pens.Red : bl.Unit.Id == Me.Id ? Pens.Green : bl.Unit.Faction == Faction.Other ? Pens.GreenYellow : Pens.Gray,
+                gr.FillEllipse(bl.IsEnemy ? Brushes.Red : bl.Unit.Id == Me.Id ? Brushes.Green : bl.Unit.Faction == Faction.Other ? Brushes.Yellow : Brushes.Gray,
                     (float)bl.Unit.X - minx- (float)bl.Unit.Radius, (float)bl.Unit.Y - miny- (float)bl.Unit.Radius, (float)bl.Unit.Radius*2, (float)bl.Unit.Radius*2);
             }
 
-            var averageVal = vals.Sum() / vals.Count;
 
-            for(int i = 0; i < dots.Count; i++) {
-
-                Point p = dots[i].toPoint() - new Point((int)minx, (int)miny);
-           
-
-                gr.FillEllipse(vals[i] > averageVal ? Brushes.Green : vals[i]< averageVal ? Brushes.Red : Brushes.Orange, p.X , p.Y , 10,10);
-            }
-
-            gr.DrawEllipse(Pens.White, (float)result.X - minx , (float)result.Y - miny , 10, 10 );
+            gr.FillEllipse(Brushes.Magenta, (float)result.X - minx -10, (float)result.Y - miny-10 , 20, 20 );
             bmp.Save("local.png", ImageFormat.Png);
 
         }
         static Vector bonus;
         static Problem CalcProblem() {
-            if(inBattle) {
-                return Me.Life < Me.MaxLife * 0.5 || DangerPlace() ? Problem.Run : Problem.Attack;
-            }
-            if(World.Bonuses.Count()>0) {
+            if(World.Bonuses.Count() > 0) {
                 bonus = new Vector(World.Bonuses[0].X, World.Bonuses[0].Y);
                 return Problem.Bonus;
             }
+            if(inBattle) {
+                return Me.Life < Me.MaxLife * 0.5 || DangerPlace() ? Problem.Run : Problem.Attack;
+            }
+           
 
             return Problem.Push; // TODo add defend
         }
@@ -290,14 +325,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
         }
 
+        public Vector Position { get; internal set; }
+
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
             Distance = Unit.GetDistanceTo(Me);
+            Position = new Vector(unit.X, unit.Y);
         }
 
         internal static void SetParams() {
-            HomeBase = Me.Faction == Faction.Academy ? new Vector(600, 3390) : new Vector(3390, 600);
-            TheirBase = Me.Faction == Faction.Renegades ? new Vector(600, 3390) : new Vector(3390, 600);
+            HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
+            TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
         }
         internal double DotValueInFight(Vector dot) {
@@ -310,22 +348,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
 
-        internal double DotValueInFight(Vector dot, bool run, double dAverage) {
-            double unitDist = dot.DistanceTo(Unit.X, Unit.Y);
-            double vAvoid = IsEnemy ? 0 :
-               dAverage/unitDist;
-            double vSafe = 1;
-            if(IsEnemy) {
-                if(run)
-                    vSafe = unitDist > GetCastRange() ? 1 : 0;
 
-                else vSafe = unitDist > Me.CastRange * 0.7 && unitDist < Me.CastRange*0.9 ? 1 : 0;
-            }
-
-            double vAccess = unitDist <= Unit.Radius + 1.5 * Me.Radius ? 0 : 1;
-
-            return vAvoid * vAccess * vSafe;
-        }
 
         private double GetCastRange() {
             if(Unit is Minion) 
