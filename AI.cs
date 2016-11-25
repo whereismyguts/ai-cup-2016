@@ -42,21 +42,15 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         private static Vector CorrectByPotention(Vector goal) {
-           
             List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.5 + u.Unit.Radius).ToList();
-
             if(nearBlocks.Count > 0) {
-                // Vector oldDir = goal - new Vector(Me.X, Me.Y);
                 Vector newDir = new Vector();
                 foreach(UnitInfo unit in nearBlocks) {
-                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y);
+                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y).SetLength(1000);
                     newDir += addForce;
                 }
-
-                return new Vector(Me.X,Me.Y) + newDir;
+                return goal + newDir;
             }
-
-
             return goal;
         }
 
@@ -90,7 +84,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static void SmartWalk(Vector goal) {
             if(goal.IsEmpty)
                 return;
-            Vector meToGoal = goal - new Vector(Me.X, Me.Y);
+            Vector meToGoal = goal - UnitInfo.MyPosition;
             Vector correctSpeed = meToGoal.SetLength(3.0);
             Vector correctDir = correctSpeed.Rotate(-Me.Angle);
 
@@ -179,7 +173,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static Vector CalcOptimalLocalPoint(bool run) {
             // return new Vector();
             
-            var blocks = AllLivingUnits.Where(u => u.Distance < Me.CastRange).ToList(); // must be order
+            var blocks = AllLivingUnits.Where(u => u.Distance < Me.CastRange*1.5).ToList(); // must be order
 
             var enemies = blocks.Where(u => u.IsEnemy).ToList();
 
@@ -188,13 +182,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
             var other = blocks.Where(u => !u.IsEnemy);
 
-            var myPosition = new Vector(Me.X, Me.Y);
-
             double rMax = Me.CastRange;
            
             double rStep = Me.Radius;
 
-            double safeDistance = run ? Me.CastRange*1.1 : Me.CastRange / 2;
+            double safeDistance =  Me.CastRange / 2;
 
             List<Vector> dots = new List<Vector>();
             for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
@@ -210,7 +202,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                    
                     if(dot.X < 50 || dot.X > 3950 || dot.Y < 50 || dot.Y > 3950)
                         continue;
-                    UnitInfo danger = enemies.FirstOrDefault(u=> dot.DistanceTo(u.Position) < Me.Radius+safeDistance);
+                    UnitInfo danger = enemies.FirstOrDefault(u=> dot.DistanceTo(u.Position) < (run? Me.Radius+u.GetCastRange():Me.Radius+safeDistance));
                     if(danger != null)
                         continue;
                     UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius +u.Unit.Radius* 1.1);
@@ -284,11 +276,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Game = game;
             Move = move;
             UnitInfo.Me = Me;
+            UnitInfo.Game = Game;
 
             if(UnitInfo.ShouldInit)
                 UnitInfo.SetParams();    
         }
         static void GatherInfo() {
+            UnitInfo.MyPosition = new Vector(Me.X, Me.Y);
             UpdateMap();
             List<LivingUnit> objects = new List<LivingUnit>(World.Wizards);
             objects.AddRange(World.Minions);
@@ -327,6 +321,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         public Vector Position { get; internal set; }
+        public static Vector MyPosition { get; internal set; }
 
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
@@ -350,10 +345,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return Unit.Faction.ToString() + " " + Unit.GetType().Name + ", d:" + Distance;
         }
 
-
-
-
-        private double GetCastRange() {
+        public double GetCastRange() {
+            if(Game == null) return Me.CastRange;
             if(Unit is Minion) 
                 return Game.FetishBlowdartAttackRange;
             if(Unit is Wizard)
@@ -361,35 +354,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(Unit is Building)
                 return ((Building)Unit).AttackRange;
             return Me.CastRange;
-        }
-
-        private bool IsTripleRayInterSectsSomeone(Vector dot) {
-            double deg90 = Math.PI / 2;
-            Vector me = new Vector(Me.X, Me.Y);
-
-            Vector Ray = dot - me;
-            Vector Lm = Ray.Rotate(deg90).SetLength(Me.Radius * 1.5);
-            Vector Rm = Ray.Rotate(-deg90).SetLength(Me.Radius * 1.5);
-
-            Vector yar = me - dot;
-            Vector Ld = Ray.Rotate(-deg90).SetLength(Me.Radius * 1.5);
-            Vector Rd = Ray.Rotate(deg90).SetLength(Me.Radius * 1.5);
-
-            Vector RayL = Ld - Lm;
-            Vector RayR = Rd - Rm;
-
-          
-
-            return IsRayIntersectsCircle(me, me + Ray, new Vector( Unit.X,Unit.Y),Me.Radius * 2) ||
-                IsRayIntersectsCircle(me + Lm, me + RayL, new Vector(Unit.X, Unit.Y), Me.Radius * 2) ||
-                IsRayIntersectsCircle(me + Rm, me + RayR, new Vector(Unit.X, Unit.Y), Me.Radius * 2);
-
-        }
-
-        private bool IsRayIntersectsCircle(Vector v0, Vector v1, Vector center, double r) {
-            double alfa = Vector.Angle((center - v0), (v1 - v0));
-            double distFromCenterToRay = (center - v0).DistanceTo(0, 0); // length
-            return r >= Math.Abs( distFromCenterToRay * Math.Cos(alfa));
         }
     }
 }

@@ -294,7 +294,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     }
     static class AStar {
         public static PointList FindPath(PointList field, Point start, Point goal) {
-            long exitTick = DateTime.Now.Ticks + 5 * TimeSpan.TicksPerSecond;
+            long exitTick = DateTime.Now.Ticks + 3 * TimeSpan.TicksPerSecond;
 
             field.Remove(goal);
             field.Remove(start);
