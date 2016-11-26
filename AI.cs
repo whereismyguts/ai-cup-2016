@@ -42,14 +42,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         private static Vector CorrectByPotention(Vector goal) {
-            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.5 + u.Unit.Radius).ToList();
+            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.1 + u.Unit.Radius).ToList();
             if(nearBlocks.Count > 0) {
-                Vector newDir = new Vector();
+                Vector newDir =( goal - UnitInfo.MyPosition).SetLength(70);
                 foreach(UnitInfo unit in nearBlocks) {
-                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y).SetLength(1000);
+                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y);
                     newDir += addForce;
                 }
-                return goal + newDir;
+                return UnitInfo.MyPosition + newDir;
             }
             return goal;
         }
@@ -66,7 +66,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     Kick(near, ActionType.Staff);
                 }
                 else
-                    Kick(attackTarget, ActionType.None);
+                    Kick(attackTarget, ActionType.Staff);
             }
         }
 
@@ -109,6 +109,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Vector goal = CorrectByPotention(new Vector(x, y));
             Move.Turn = Me.GetAngleTo(goal.X, goal.Y);
             Move.Speed = Game.WizardForwardSpeed;
+
+           // WalkAround();
         }
         static bool WalkAround() {
             try {
@@ -142,8 +144,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
            
         }
         static UnitInfo CalcAttackTarget() {
-            if(EnemyUnitsInFight.Count > 0)
-                return EnemyUnitsInFight.FirstOrDefault(); // mist be ordered
+            if(EnemyUnitsInFight.Count > 0) {
+
+              var weakUnit =   EnemyUnitsInFight.FirstOrDefault(e => e.Unit.Life <= Game.MagicMissileDirectDamage * 2);
+                if(weakUnit != null)
+                    return weakUnit;
+                return EnemyUnitsInFight.FirstOrDefault();
+            }// mist be ordered
             var tree = AllLivingUnits.Find(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
             return tree;
         }
@@ -177,7 +184,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             var enemies = blocks.Where(u => u.IsEnemy).ToList();
 
-            if(enemies.Count == 1 && Me.Life<Me.MaxLife/2) {
+            if(enemies.Count == 1 && Me.Life<Me.MaxLife*0.4) {
                 return UnitInfo.HomeBase;
             }
             var other = blocks.Where(u => !u.IsEnemy);
@@ -186,38 +193,38 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
            
             double rStep = Me.Radius;
 
-            double safeDistance =  Me.CastRange / 2;
+            double safeDistance = World.TickIndex > 1000 ? Me.CastRange *0.3 : Me.CastRange;
 
             List<Vector> dots = new List<Vector>();
             for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
-                for(double Ry = -rMax; Ry <= rMax; Ry += rStep)
-                    dots.Add(new Vector(
-                        Me.X + Rx,
-                        Me.Y + Ry));
+                for(double Ry = -rMax; Ry <= rMax; Ry += rStep) {
 
-            dots = dots.OrderBy(d => d.DistanceTo(UnitInfo.HomeBase)).ToList();
-            foreach(var dot in dots)
-                    {
-                    //for(double fi = 0; fi < Math.PI * 2; fi += Math.PI / 24) {
+                    Vector dot = new Vector(
+                        Me.X + Rx,
+                        Me.Y + Ry);
                    
+
+
                     if(dot.X < 50 || dot.X > 3950 || dot.Y < 50 || dot.Y > 3950)
                         continue;
-                    UnitInfo danger = enemies.FirstOrDefault(u=> dot.DistanceTo(u.Position) < (run? Me.Radius+u.GetCastRange():Me.Radius+safeDistance));
+                    UnitInfo danger = enemies.FirstOrDefault(u => dot.DistanceTo(u.Position) < (run ? Me.Radius + u.GetCastRange() : Me.Radius + safeDistance));
                     if(danger != null)
                         continue;
-                    UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius +u.Unit.Radius* 1.1);
+                    UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius + u.Unit.Radius * 1.1);
                     if(block != null)
                         continue;
-                if(attackTarget != null) {
-                  
+                    if(attackTarget != null) {
 
-                    if(dot.DistanceTo(attackTarget.Position) > Me.CastRange * 0.8)
-                        continue;
+
+                        if(dot.DistanceTo(attackTarget.Position) > Me.CastRange*0.7)
+                            continue;
+                    }
+                    dots.Add(dot);
                 }
-
-
-                    return dot;
-                }
+            if(dots.Count > 0) {
+                dots = dots.OrderBy(d => d.DistanceTo(UnitInfo.HomeBase)).ToList();
+                return dots[0];
+            }
 
             return UnitInfo.HomeBase;
             
@@ -254,7 +261,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 return Problem.Bonus;
             }
             if(inBattle) {
-                return Me.Life < Me.MaxLife * 0.5 || DangerPlace() ? Problem.Run : Problem.Attack;
+                return Me.Life < Me.MaxLife * 0.4 || DangerPlace() ? Problem.Run : Problem.Attack;
             }
            
 
@@ -352,7 +359,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(Unit is Wizard)
                 return ((Wizard)Unit).CastRange;
             if(Unit is Building)
-                return ((Building)Unit).AttackRange;
+                return  ((Building)Unit).AttackRange   ;
             return Me.CastRange;
         }
     }
