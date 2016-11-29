@@ -26,6 +26,21 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             problem = CalcProblem(); //2nd level
             CalcTargets(); //3rd level
             ProcessTargets(); //4th level
+
+            LearnSkills();
+        }
+        static int[] skills = {5,6,7,8,9,0,1,2,3,4 };
+        static int level = 0;
+        private static void LearnSkills() {
+            if(level != Me.Level && Game.IsSkillsEnabled) {
+                level = Me.Level;
+                for(int i = 0; i < skills.Length; i++) {
+                    if(!Me.Skills.Contains((SkillType)i)) {
+                        Move.SkillToLearn = (SkillType)i;
+                        return;
+                    }
+                }
+            }
         }
 
         static void ProcessTargets() {
@@ -55,13 +70,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         static void SmartAttack(UnitInfo attackTarget) {
-            if(CanShoot()) {
+            var action = BestAction();
+            if(action != ActionType.Staff) {
                 Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit.Radius * 1.1;
                 Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit.Radius * 1.1;
-                Kick(attackTarget, ActionType.MagicMissile);
+                Kick(attackTarget, action);
             }
             else {
-                var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius * 1.5);
+                var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius * 2);
                 if(near != null) {
                     Kick(near, ActionType.Staff);
                 }
@@ -78,8 +94,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 Move.Turn = angle;
         }
 
-        static bool CanShoot() {
-            return Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5;
+        static ActionType BestAction() {
+            if(Me.Skills.Contains(SkillType.FrostBolt) &&
+                 Me.RemainingActionCooldownTicks < 5 &&
+                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5)
+                return ActionType.FrostBolt;
+            if(Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5)
+                return ActionType.MagicMissile;
+            return ActionType.Staff;
         }
         static void SmartWalk(Vector goal) {
             if(goal.IsEmpty)
