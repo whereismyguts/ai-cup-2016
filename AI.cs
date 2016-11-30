@@ -29,7 +29,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             LearnSkills();
         }
-        static int[] skills = {5,6,7,8,9,0,1,2,3,4 };
+        //static int[] skills = {5,6,7,8,9,0,1,2,3,4 };
+        static int[] skills = {  0, 1, 2, 3, 4 , 5, 6, 7, 8, 9 };
         static int level = 0;
         private static void LearnSkills() {
             if(level != Me.Level && Game.IsSkillsEnabled) {
