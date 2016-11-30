@@ -97,7 +97,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static ActionType BestAction() {
             if(Me.Skills.Contains(SkillType.FrostBolt) &&
                  Me.RemainingActionCooldownTicks < 5 &&
-                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5)
+                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5 &&
+                 Me.Mana >= Game.FrostBoltManacost &&
+                 attackTarget!=null && (attackTarget.Type== UnitType.Wizard || attackTarget.Type == UnitType.Building))
                 return ActionType.FrostBolt;
             if(Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5)
                 return ActionType.MagicMissile;
