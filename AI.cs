@@ -433,7 +433,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 return res;
             }
         }
-
+        public UnitType Type { get; set; }
+        public static Building HomeThrone { get; internal set; }
+        public static World World { get; internal set; }
         public static int RangedDamage { get; set; }
 
         public UnitInfo(LivingUnit unit) {
