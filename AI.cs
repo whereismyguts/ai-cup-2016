@@ -332,6 +332,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static Vector bonus;
         static Problem CalcProblem() {
+            if(UnitInfo.HomeThrone.Life < UnitInfo.HomeThrone.MaxLife / 3)
+                return Problem.Defend;
             if(World.Bonuses.Count() > 0) {
                 bonus = new Vector(World.Bonuses[0].X, World.Bonuses[0].Y);
                 return Problem.Bonus;
