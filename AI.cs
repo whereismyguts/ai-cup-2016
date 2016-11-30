@@ -97,9 +97,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static ActionType BestAction() {
             if(Me.Skills.Contains(SkillType.FrostBolt) &&
                  Me.RemainingActionCooldownTicks < 5 &&
-                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5 &&
-                 Me.Mana >= Game.FrostBoltManacost &&
-                 attackTarget!=null && (attackTarget.Type== UnitType.Wizard || attackTarget.Type == UnitType.Building))
+                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5)
                 return ActionType.FrostBolt;
             if(Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5)
                 return ActionType.MagicMissile;
@@ -170,11 +168,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0) {
 
-                var targets = EnemyUnitsInFight.OrderBy(unit=>unit.AttackValue);
-
-               
-                    return targets.LastOrDefault();
-
+                var weakUnit = EnemyUnitsInFight.FirstOrDefault(e => e.Unit.Life <= Game.MagicMissileDirectDamage * 2);
+                if(weakUnit != null)
+                    return weakUnit;
+                return EnemyUnitsInFight.FirstOrDefault();
             }// mist be ordered
             var tree = AllLivingUnits.Find(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
             return tree;
@@ -206,28 +203,43 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         static Vector CalcPushPoint() {
+            if(Me.Messages.Length > 0) {
+                try {
+                    int lane = (int)Me.Messages[0].Lane;
+                    if(CalcCurrentLane(UnitInfo.MyPosition) != lane)
+                        return CalcBattlePointInLane(lane);
+                }
+                catch(Exception e) {
+                }
+            }
             return NextOnLane();
             //var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
             //return en == null ? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
+        }
+
+        private static Vector CalcBattlePointInLane(int lane) {
+            var intruders = AllLivingUnits.Where(unit=>unit.IsEnemy && CalcCurrentLane(unit.Position)==lane &&( unit.Type == UnitType.Wizard || unit.Type == UnitType.Minion)).ToList();
+            if(intruders != null && intruders.Count > 0) {
+                intruders = intruders.OrderBy(unit => unit.Position.DistanceTo(UnitInfo.HomeBase)).ToList();
+                return intruders.First().Position;
+            }
+
+            return NextOnLane();
         }
 
         static Vector bot = new Vector(3600, 3600);
         static Vector mid = new Vector(2000, 2000);
         static Vector top = new Vector(400, 400);
 
-        static int CurrentLane {
-            get {
-                return CalcCurrentLane();
-            }
-        }
-        static int CalcCurrentLane() {
+        
+        static int CalcCurrentLane(Vector point) {
             // return (int)LaneType.Top;
-            double sum = Me.X + Me.Y;
+            double sum = point.X + point.Y;
             if(sum > 3400 && sum < 4500)
                 return (int)LaneType.Middle;
-            if(Me.X < 500 || Me.Y < 500)
+            if(point.X < 500 || point.Y < 500)
                 return (int)LaneType.Top;
-            if(Me.X > 3500 || Me.Y > 3500)
+            if(point.X > 3500 || point.Y > 3500)
                 return (int)LaneType.Bottom;
             return -1;
         }
@@ -235,7 +247,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(UnitInfo.MyPosition.DistanceTo(UnitInfo.HomeBase) > UnitInfo.MyPosition.DistanceTo(UnitInfo.TheirBase))
                 return UnitInfo.TheirBase;
 
-            switch(CurrentLane) {
+            switch(CalcCurrentLane(UnitInfo.MyPosition)) {
                 case (int)LaneType.Bottom: return bot;
                 case (int)LaneType.Top: return top;
                 case (int)LaneType.Middle: return mid;
@@ -382,9 +394,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             AllLivingUnits = objects.Where(u => u.Id != Me.Id).Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
             EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).OrderBy(u => u.Distance).ToList();
-            UnitInfo.RangedDamage = BestAction() == ActionType.FrostBolt ? Game.FrostBoltDirectDamage : Game.MagicMissileDirectDamage;
-            UnitInfo.RangedDamage += Game.MagicalDamageBonusPerSkillLevel * Me.Level;
-
         }
         static void UpdateMap() {
             var objects = new List<CircularUnit>();
@@ -419,28 +428,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         public Vector Position { get; internal set; }
         public static Vector MyPosition { get; internal set; }
-        public int AttackValue { get {
-                int res = -(int)Distance;
-                if(Unit.Life <= RangedDamage) {
-                    res += 100000;
-                    return res;
-                }
-                if(Unit is Minion) 
-                    res += 1000 ; 
-                else
-                if(Unit is Wizard)
-                    res += 3000;
-                else
-                if(Unit is Building) {
-                    res += ((Building)Unit).Type == BuildingType.GuardianTower ? 4000 : 5000;
-                }
-                return res;
-            }
-        }
-        public UnitType Type { get; set; }
         public static Building HomeThrone { get; internal set; }
         public static World World { get; internal set; }
-        public static int RangedDamage { get; set; }
+        
+        public UnitType Type { get; set; }
 
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
