@@ -260,7 +260,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             if(UnitInfo.MyPosition.DistanceTo(UnitInfo.HomeBase) < UnitInfo.MyPosition.DistanceTo(UnitInfo.TheirBase))
                 return UnitInfo.HomeBase;
 
-            switch(CurrentLane) {
+            switch(CalcCurrentLane(UnitInfo.MyPosition)) {
                 case (int)LaneType.Bottom: return bot;
                 case (int)LaneType.Top: return top;
                 case (int)LaneType.Middle: return mid;
