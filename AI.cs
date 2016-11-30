@@ -97,7 +97,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static ActionType BestAction() {
             if(Me.Skills.Contains(SkillType.FrostBolt) &&
                  Me.RemainingActionCooldownTicks < 5 &&
-                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5)
+                 Me.RemainingCooldownTicksByAction[(int)ActionType.FrostBolt] < 5 &&
+                 Me.Mana >= Game.FrostBoltManacost &&
+                 attackTarget!=null && (attackTarget.Type== UnitType.Wizard || attackTarget.Type == UnitType.Building))
                 return ActionType.FrostBolt;
             if(Me.RemainingActionCooldownTicks < 5 && Me.RemainingCooldownTicksByAction[(int)ActionType.MagicMissile] < 5)
                 return ActionType.MagicMissile;
@@ -168,10 +170,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0) {
 
-                var weakUnit = EnemyUnitsInFight.FirstOrDefault(e => e.Unit.Life <= Game.MagicMissileDirectDamage * 2);
-                if(weakUnit != null)
-                    return weakUnit;
-                return EnemyUnitsInFight.FirstOrDefault();
+                var targets = EnemyUnitsInFight.OrderBy(unit=>unit.AttackValue);
+
+               
+                    return targets.LastOrDefault();
+
             }// mist be ordered
             var tree = AllLivingUnits.Find(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
             return tree;
@@ -379,6 +382,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
             AllLivingUnits = objects.Where(u => u.Id != Me.Id).Select(o => new UnitInfo(o)).OrderBy(u => u.Distance).ToList();
             EnemyUnitsInFight = AllLivingUnits.Where(u => u.IsEnemy && u.Distance <= Me.VisionRange).OrderBy(u => u.Distance).ToList();
+            UnitInfo.RangedDamage = BestAction() == ActionType.FrostBolt ? Game.FrostBoltDirectDamage : Game.MagicMissileDirectDamage;
+            UnitInfo.RangedDamage += Game.MagicalDamageBonusPerSkillLevel * Me.Level;
+
         }
         static void UpdateMap() {
             var objects = new List<CircularUnit>();
@@ -413,10 +419,28 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         public Vector Position { get; internal set; }
         public static Vector MyPosition { get; internal set; }
+        public int AttackValue { get {
+                int res = -(int)Distance;
+                if(Unit.Life <= RangedDamage) {
+                    res += 100000;
+                    return res;
+                }
+                if(Unit is Minion) 
+                    res += 1000 ; 
+                else
+                if(Unit is Wizard)
+                    res += 3000;
+                else
+                if(Unit is Building) {
+                    res += ((Building)Unit).Type == BuildingType.GuardianTower ? 4000 : 5000;
+                }
+                return res;
+            }
+        }
+        public UnitType Type { get; set; }
         public static Building HomeThrone { get; internal set; }
         public static World World { get; internal set; }
-        
-        public UnitType Type { get; set; }
+        public static int RangedDamage { get; set; }
 
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
