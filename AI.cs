@@ -185,30 +185,36 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 case Problem.Bonus:
                     return bonus;
                 case Problem.Push:
-                    return CalcLanePoint();
+                    return CalcPushPoint();
                 case Problem.Defend:
-                    return UnitInfo.HomeBase;
+                    return CalcDefendPoint();
             }
             return new Vector(2000, 2000);
 
         }
-        static Vector CalcLanePoint() {
-            return NextOnLane();
-            var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
 
-            return en == null ? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
-
+        static Vector CalcDefendPoint() {
+            var dangerToBase = AllLivingUnits
+                .Where(unit => unit.IsEnemy && (unit.Type == UnitType.Wizard || unit.Type == UnitType.Minion))
+                .OrderBy(unit => unit.Position.DistanceTo(UnitInfo.HomeBase)).LastOrDefault();
+            if(dangerToBase != null)
+                return dangerToBase.Position;
+            return UnitInfo.HomeBase;
         }
+
+        static Vector CalcPushPoint() {
+            return NextOnLane();
+            //var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
+            //return en == null ? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
+        }
+
         static Vector bot = new Vector(3600, 3600);
         static Vector mid = new Vector(2000, 2000);
         static Vector top = new Vector(400, 400);
 
-        static int CurrentLane
-        {
-            get
-            {
+        static int CurrentLane {
+            get {
                 return CalcCurrentLane();
-
             }
         }
         static int CalcCurrentLane() {
@@ -334,8 +340,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 return Me.Life < Me.MaxLife * 0.4 || DangerPlace() ? Problem.Run : Problem.Attack;
             }
 
+            if(UnitInfo.HomeThrone.Life < UnitInfo.HomeThrone.MaxLife / 2 && UnitInfo.MyPosition.DistanceTo(UnitInfo.HomeBase) < 4000)
+                return Problem.Defend;
 
-            return Problem.Push; // TODo add defend
+                return Problem.Push; // TODo add defend
         }
         static bool DangerPlace() {
             var friendlyUnitsNear = AllLivingUnits.Where(
@@ -354,6 +362,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             Move = move;
             UnitInfo.Me = Me;
             UnitInfo.Game = Game;
+            UnitInfo.World = World;
 
             if(UnitInfo.ShouldInit)
                 UnitInfo.SetParams();
@@ -379,6 +388,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 grid.Reveal(objects);
         }
     }
+    public enum UnitType { Minion, Wizard, Building, Tree }
     class UnitInfo {
         public static Wizard Me { get; set; }
         public static Game Game { get; set; }
@@ -401,11 +411,26 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         public Vector Position { get; internal set; }
         public static Vector MyPosition { get; internal set; }
+        public static Building HomeThrone { get; internal set; }
+        public static World World { get; internal set; }
+        
+        public UnitType Type { get; set; }
 
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
             Distance = Unit.GetDistanceTo(Me);
             Position = new Vector(unit.X, unit.Y);
+
+            if(Unit is Minion)
+                Type = UnitType.Minion;
+            else
+            if(Unit is Wizard)
+                Type = UnitType.Wizard;
+            else
+            if(Unit is Building)
+                Type = UnitType.Building;
+            else
+                Type = UnitType.Tree;
         }
 
         internal static void SetParams() {
@@ -415,6 +440,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             // HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
             //TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
+            HomeThrone = World.Buildings.FirstOrDefault(b=>b.Type == BuildingType.FactionBase && b.Faction == Me.Faction);
             ShouldInit = false;
         }
         internal double DotValueInFight(Vector dot) {
@@ -428,12 +454,14 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         public double GetCastRange() {
             if(Game == null) return Me.CastRange;
-            if(Unit is Minion)
-                return Game.FetishBlowdartAttackRange;
-            if(Unit is Wizard)
-                return ((Wizard)Unit).CastRange;
-            if(Unit is Building)
-                return ((Building)Unit).AttackRange;
+            switch(Type) {
+                case UnitType.Minion:
+                    return Game.FetishBlowdartAttackRange;
+                case UnitType.Wizard:
+                    return ((Wizard)Unit).CastRange;
+                case UnitType.Building:
+                    return ((Building)Unit).AttackRange;
+            }
             return Me.CastRange;
         }
     }
