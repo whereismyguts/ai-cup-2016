@@ -322,7 +322,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     dots.Add(dot);
                 }
             if(dots.Count > 0) {
-                var runPoint = UnitInfo.HomeThrone.GetDistanceTo(Me.X, Me.Y) > Me.CastRange ? PrevOnLane() : NextOnLane();
+                var runPoint = UnitInfo.HomeBase.DistanceTo(UnitInfo.MyPosition) > Me.CastRange ? PrevOnLane() : NextOnLane();
                 dots = dots.OrderBy(d => d.DistanceTo(runPoint)).ToList();
                 return dots[0];
             }
