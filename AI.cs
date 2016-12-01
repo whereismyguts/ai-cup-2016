@@ -270,23 +270,19 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         static Vector CalcOptimalLocalPoint(bool run) {
-            // return new Vector();
-
             var blocks = AllLivingUnits.Where(u => u.Distance < Me.CastRange * 1.5).ToList(); // must be order
-
             var enemies = blocks.Where(u => u.IsEnemy).ToList();
-
             if(enemies.Count == 1 && Me.Life < Me.MaxLife * 0.4) {
                 return PrevOnLane();
             }
             var other = blocks.Where(u => !u.IsEnemy);
 
-            double rMax = Me.CastRange*1.5;
+            //double safeDistance = World.TickIndex > 1000 ? Me.CastRange * 0.3 : Me.CastRange;
+            double safeDistance = Me.CastRange * 0.3;
+            double maxDistance = Me.CastRange * 0.7;
 
+            double rMax = Me.CastRange * 1.5;
             double rStep = Me.Radius;
-
-            double safeDistance = World.TickIndex > 1000 ? Me.CastRange * 0.3 : Me.CastRange;
-
             List<Vector> dots = new List<Vector>();
             for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
                 for(double Ry = -rMax; Ry <= rMax; Ry += rStep) {
@@ -305,16 +301,17 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius + u.Unit.Radius * 1.1);
                     if(block != null)
                         continue;
-                    if(attackTarget != null) {
-
-
-                        if(dot.DistanceTo(attackTarget.Position) > Me.CastRange * 0.7)
+                    var close = EnemyUnitsInFight.FirstOrDefault();
+                  
+                    if(close != null) {
+                        if(dot.DistanceTo(close.Position) > maxDistance)
                             continue;
                     }
                     dots.Add(dot);
                 }
             if(dots.Count > 0) {
-                dots = dots.OrderBy(d => d.DistanceTo(PrevOnLane())).ToList();
+                var runPoint = UnitInfo.HomeThrone.GetDistanceTo(Me.X, Me.Y) > Me.CastRange ? PrevOnLane() : NextOnLane();
+                dots = dots.OrderBy(d => d.DistanceTo(runPoint)).ToList();
                 return dots[0];
             }
 
@@ -381,9 +378,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             UnitInfo.Me = Me;
             UnitInfo.Game = Game;
             UnitInfo.World = World;
-
             if(UnitInfo.ShouldInit)
                 UnitInfo.SetParams();
+
+            UnitInfo.AttackNeutrals = world.TickIndex < 1000;
         }
         static void GatherInfo() {
             UnitInfo.MyPosition = new Vector(Me.X, Me.Y);
