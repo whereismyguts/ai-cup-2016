@@ -209,6 +209,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
     }
     public struct Vector {
+        public override string ToString() {
+            return "("+X + ";" + Y+")";
+        }
         public Vector(double x, double y) {
             this.X = x;
             this.Y = y;

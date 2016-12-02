@@ -32,7 +32,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         //static int[] skills = {5,6,7,8,9,0,1,2,3,4 };
         static int[] skills = {  0, 1, 2, 3, 4 , 5, 6, 7, 8, 9 };
         static int level = 0;
-        private static void LearnSkills() {
+        static void LearnSkills() {
             if(level != Me.Level && Game.IsSkillsEnabled) {
                 level = Me.Level;
                 for(int i = 0; i < skills.Length; i++) {
@@ -57,38 +57,41 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             }
         }
 
-        private static Vector CorrectByPotention(Vector goal) {
-            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.3 + u.Unit.Radius).ToList();
+        static Vector CorrectByPotention(Vector goal) {
+            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.3 + u.Radius).ToList();
             if(nearBlocks.Count > 0) {
                 Vector newDir = (goal - UnitInfo.MyPosition).SetLength(50);
                 foreach(UnitInfo unit in nearBlocks) {
-                    Vector addForce = new Vector(Me.X - unit.Unit.X, Me.Y - unit.Unit.Y);
+                    Vector addForce = UnitInfo.MyPosition - unit.Position;
                     newDir += addForce;
                 }
                 return UnitInfo.MyPosition + newDir;
             }
             return goal;
         }
-
+        
         static void SmartAttack(UnitInfo attackTarget) {
             var action = BestAction();
             if(action != ActionType.Staff) {
-                Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit.Radius * 1.1;
-                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit.Radius * 1.1;
+                Move.MinCastDistance = attackTarget.Distance - attackTarget.Radius * 1.1;
+                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Radius * 1.1;
                 Kick(attackTarget, action);
+                return;
             }
             else {
-                var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius * 2);
+                var near = EnemyUnitsInFight.FirstOrDefault(e => e.Distance <= Me.Radius *1.1+e.Radius);
                 if(near != null) {
-                    Kick(near, ActionType.Staff);
+                    Kick(near, action);
+                    return;
                 }
-                else
-                    Kick(attackTarget, ActionType.Staff);
             }
+            var tree = AllLivingUnits.Find(u => u.Type == UnitType.Tree && u.Distance <= Me.Radius * 1.1 + u.Radius);// must be ordered;
+            if(tree != null)
+                Kick(tree, action);
         }
 
-        private static void Kick(UnitInfo target, ActionType type) {
-            double angle = Me.GetAngleTo(target.Unit);
+        static void Kick(UnitInfo target, ActionType type) {
+            double angle = Me.GetAngleTo(target.Position.X, target.Position.Y);
             if(Math.Abs(angle) <= 0.01)
                 Move.Action = type;
             else
@@ -137,9 +140,9 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
         static bool WalkAround() {
             try {
-                UnitInfo obj = AllLivingUnits.Where(b => b.Unit.Id != Me.Id).FirstOrDefault(); // must be ordered 
-                double minDist = Me.Radius + obj.Unit.Radius + 30;
-                double angle = Me.GetAngleTo(obj.Unit.X, obj.Unit.Y);
+                UnitInfo obj = AllLivingUnits.FirstOrDefault(); // must be ordered 
+                double minDist = Me.Radius + obj.Radius + 30;
+                double angle = Me.GetAngleTo(obj.Position.X, obj.Position.Y);
 
                 if(Math.Abs(angle) <= Math.PI && obj.Distance <= minDist) {
 
@@ -169,13 +172,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static UnitInfo CalcAttackTarget() {
             if(EnemyUnitsInFight.Count > 0) {
 
-                var weakUnit = EnemyUnitsInFight.FirstOrDefault(e => e.Unit.Life <= Game.MagicMissileDirectDamage * 2);
+                var weakUnit = EnemyUnitsInFight.FirstOrDefault(e => e.Life <= Game.MagicMissileDirectDamage * 2);
                 if(weakUnit != null)
                     return weakUnit;
                 return EnemyUnitsInFight.FirstOrDefault();
             }// mist be ordered
-            var tree = AllLivingUnits.Find(u => u.Unit is Tree && u.Distance <= Me.Radius * 1.5);// must be ordered
-            return tree;
+            return null;
         }
         static Vector CalcMoveTarget() {
             switch(problem) {
@@ -204,21 +206,24 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         static Vector CalcPushPoint() {
-            if(Me.Messages.Length > 0) {
-                try {
-                    int lane = (int)Me.Messages[0].Lane;
-                    if(CalcCurrentLane(UnitInfo.MyPosition) != lane)
-                        return CalcBattlePointInLane(lane);
-                }
-                catch(Exception e) {
-                }
-            }
+            //if(Me.Messages.Length > 0) {
+            //    try {
+            //        int lane = (int)Me.Messages[0].Lane;
+            //        if(CalcCurrentLane(UnitInfo.MyPosition) != lane)
+            //            return CalcBattlePointInLane(lane);
+            //    }
+            //    catch(Exception e) {
+            //    }
+            //}
+
+            var en = EnemyUnitsInFight.FirstOrDefault();
+            var next = NextOnLane();
+            if(en != null && en.Distance < next.DistanceTo(UnitInfo.MyPosition))
+                return en.Position;
             return NextOnLane();
-            //var en = AllLivingUnits.Where(u => u.IsEnemy).FirstOrDefault();
-            //return en == null ? new Vector(2000, 2000) : new Vector(en.Unit.X, en.Unit.Y);
         }
 
-        private static Vector CalcBattlePointInLane(int lane) {
+        static Vector CalcBattlePointInLane(int lane) {
             var intruders = AllLivingUnits.Where(unit=>unit.IsEnemy && CalcCurrentLane(unit.Position)==lane &&( unit.Type == UnitType.Wizard || unit.Type == UnitType.Minion)).ToList();
             if(intruders != null && intruders.Count > 0) {
                 intruders = intruders.OrderBy(unit => unit.Position.DistanceTo(UnitInfo.HomeBase)).ToList();
@@ -272,17 +277,24 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static Vector CalcOptimalLocalPoint(bool run) {
             var blocks = AllLivingUnits.Where(u => u.Distance < Me.CastRange * 1.5).ToList(); // must be order
             var enemies = blocks.Where(u => u.IsEnemy).ToList();
+            
             if(enemies.Count == 1 && Me.Life < Me.MaxLife * 0.4) {
                 return PrevOnLane();
             }
-            var other = blocks.Where(u => !u.IsEnemy);
+            var creepSpawnCycleTick = World.TickIndex % Game.FactionMinionAppearanceIntervalTicks;
+            if(creepSpawnCycleTick > Game.FactionMinionAppearanceIntervalTicks - 100 &&
+                creepSpawnCycleTick < Game.FactionMinionAppearanceIntervalTicks)
+                enemies.AddRange(UnitInfo.TheirSpawnPoints);
 
+
+            var other = blocks.Where(u => !u.IsEnemy);
+            
             //double safeDistance = World.TickIndex > 1000 ? Me.CastRange * 0.3 : Me.CastRange;
             double safeDistance = Me.CastRange * 0.3;
             double maxDistance = Me.CastRange * 0.7;
 
-            double rMax = Me.CastRange * 1.5;
-            double rStep = Me.Radius;
+            double rMax = Me.VisionRange;
+            double rStep = Me.Radius*3;
             List<Vector> dots = new List<Vector>();
             for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
                 for(double Ry = -rMax; Ry <= rMax; Ry += rStep) {
@@ -298,10 +310,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     UnitInfo danger = enemies.FirstOrDefault(u => dot.DistanceTo(u.Position) < (run ? Me.Radius + u.GetCastRange() : Me.Radius + safeDistance));
                     if(danger != null)
                         continue;
-                    UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius + u.Unit.Radius * 1.1);
+                    UnitInfo block = other.FirstOrDefault(u => dot.DistanceTo(u.Position) < Me.Radius + u.Radius * 1.1);
                     if(block != null)
                         continue;
-                    var close = EnemyUnitsInFight.FirstOrDefault();
+                    var close = enemies.FirstOrDefault();
                   
                     if(close != null) {
                         if(dot.DistanceTo(close.Position) > maxDistance)
@@ -320,29 +332,6 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
 
         }
 
-        private static void DrawOptimalPoint(Vector result, List<UnitInfo> blocks, List<Vector> dots, List<double> vals) {
-            //  Point zero = new Point((int)Me.X, (int)Me.Y);
-            float maxx = (float)(blocks.OrderBy(b => b.Unit.X).Last().Unit.X);
-            float minx = (float)(blocks.OrderBy(b => b.Unit.X).First().Unit.X);
-            float miny = (float)(blocks.OrderBy(b => b.Unit.Y).First().Unit.Y);
-            float maxy = (float)(blocks.OrderBy(b => b.Unit.Y).Last().Unit.Y);
-
-
-            Bitmap bmp = new Bitmap((int)(maxx - minx) + 50, (int)(maxy - miny) + 50);
-            Graphics gr = Graphics.FromImage(bmp);
-
-            blocks.Add(new UnitInfo(Me));
-
-            foreach(var bl in blocks) {
-                gr.FillEllipse(bl.IsEnemy ? Brushes.Red : bl.Unit.Id == Me.Id ? Brushes.Green : bl.Unit.Faction == Faction.Other ? Brushes.Yellow : Brushes.Gray,
-                    (float)bl.Unit.X - minx - (float)bl.Unit.Radius, (float)bl.Unit.Y - miny - (float)bl.Unit.Radius, (float)bl.Unit.Radius * 2, (float)bl.Unit.Radius * 2);
-            }
-
-
-            gr.FillEllipse(Brushes.Magenta, (float)result.X - minx - 10, (float)result.Y - miny - 10, 20, 20);
-            bmp.Save("local.png", ImageFormat.Png);
-
-        }
         static Vector bonus;
         static Problem CalcProblem() {
             if(UnitInfo.HomeThrone.Life < UnitInfo.HomeThrone.MaxLife / 3)
@@ -352,20 +341,13 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 return Problem.Bonus;
             }
             if(inBattle) {
-                return Me.Life < Me.MaxLife * 0.4 || DangerPlace() ? Problem.Run : Problem.Attack;
+                return Me.Life < Me.MaxLife * 0.4 ? Problem.Run : Problem.Attack;
             }
 
             if(UnitInfo.HomeThrone.Life < UnitInfo.HomeThrone.MaxLife / 2 && UnitInfo.MyPosition.DistanceTo(UnitInfo.HomeBase) < 4000)
                 return Problem.Defend;
 
                 return Problem.Push; // TODo add defend
-        }
-        static bool DangerPlace() {
-            var friendlyUnitsNear = AllLivingUnits.Where(
-                u => u.Unit.Faction == Me.Faction &&
-                u.Distance < Me.VisionRange / 0.7
-            ).ToList();
-            return friendlyUnitsNear == null || EnemyUnitsInFight.Count - friendlyUnitsNear.Count > 3;
         }
         static bool InBattle() {
             return EnemyUnitsInFight.Count > 0;
@@ -408,7 +390,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
     class UnitInfo {
         public static Wizard Me { get; set; }
         public static Game Game { get; set; }
-        public LivingUnit Unit { get; internal set; }
+        LivingUnit Unit { get; set; }
         public double Distance { get; internal set; }
         public static bool ShouldInit { get; set; } = true;
         public static bool AttackNeutrals { get; set; } = false;
@@ -431,12 +413,16 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public static World World { get; internal set; }
         
         public UnitType Type { get; set; }
+        public static List<UnitInfo> TheirSpawnPoints { get; internal set; }
+        public double Radius { get; internal set; }
+        public int Life { get; internal set; }
 
         public UnitInfo(LivingUnit unit) {
             Unit = unit;
             Distance = Unit.GetDistanceTo(Me);
             Position = new Vector(unit.X, unit.Y);
-
+            Radius = unit.Radius;
+            Life = unit.Life;
             if(Unit is Minion)
                 Type = UnitType.Minion;
             else
@@ -449,14 +435,36 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 Type = UnitType.Tree;
         }
 
+        public UnitInfo(int x, int y) {
+            Position = new Vector(x, y);
+            Distance = Position.DistanceTo(MyPosition);
+            Radius = 35;
+            Type = UnitType.Minion;
+            Life = 100;
+        }
+
         internal static void SetParams() {
             var myP = new Vector(Me.X, Me.Y);
-            HomeBase = (new Vector(2000, 2000) - myP).SetLength(750) + myP;
+         
             TheirBase = new Vector(HomeBase.Y, HomeBase.X);
             // HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
             //TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
             HomeThrone = World.Buildings.FirstOrDefault(b=>b.Type == BuildingType.FactionBase && b.Faction == Me.Faction);
+            HomeBase = new Vector( HomeThrone.X, HomeThrone.Y);
+            TheirSpawnPoints = new List<UnitInfo>();
+
+            if(HomeThrone.X < 2000) {
+                TheirSpawnPoints.Add(new UnitInfo(3000, 200));
+                TheirSpawnPoints.Add(new UnitInfo(3200, 800));
+                TheirSpawnPoints.Add(new UnitInfo(3800, 1000));
+            }
+            else {
+                TheirSpawnPoints.Add(new UnitInfo(200, 3000));
+                TheirSpawnPoints.Add(new UnitInfo(800, 3200));
+                TheirSpawnPoints.Add(new UnitInfo(1000, 3800));
+            }
+         
             ShouldInit = false;
         }
         internal double DotValueInFight(Vector dot) {
