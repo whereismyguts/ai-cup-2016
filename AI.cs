@@ -74,8 +74,8 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         static void SmartAttack(UnitInfo attackTarget) {
             var action = BestAction();
             if(action != ActionType.Staff) {
-                Move.MinCastDistance = attackTarget.Distance - attackTarget.Unit.Radius * 1.05;
-                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Unit.Radius * 1.05;
+                Move.MinCastDistance = attackTarget.Distance - attackTarget.Radius * 1.05;
+                Move.MaxCastDistance = attackTarget.Distance + attackTarget.Radius * 1.05;
                 Kick(attackTarget, action);
                 return;
             }
@@ -220,7 +220,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //}
 
             var en = EnemyUnitsInFight.FirstOrDefault();
-            var next = CalcBattlePointInLane(CalcCurrentLane(UnitInfo.MyPosition);
+            var next = CalcBattlePointInLane(CalcCurrentLane(UnitInfo.MyPosition));
             if(en != null && en.Distance < next.DistanceTo(UnitInfo.MyPosition))
                 return en.Position;
             return next;
@@ -482,11 +482,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             // HomeBase = Me.Faction == Faction.Academy ? new Vector(200, 3800) : new Vector(3800, 200);
             //TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
-            HomeThrone = World.Buildings.FirstOrDefault(b=>b.Type == BuildingType.FactionBase && b.Faction == Me.Faction);
-            HomeBase = new Vector( HomeThrone.X, HomeThrone.Y);
+            HomeThrone = new UnitInfo( World.Buildings.FirstOrDefault(b=>b.Type == BuildingType.FactionBase && b.Faction == Me.Faction));
+            HomeBase = HomeThrone.Position;
             TheirSpawnPoints = new List<UnitInfo>();
 
-            if(HomeThrone.X < 2000) {
+            if(HomeThrone.Position.X < 2000) {
                 TheirSpawnPoints.Add(new UnitInfo(3000, 200));
                 TheirSpawnPoints.Add(new UnitInfo(3200, 800));
                 TheirSpawnPoints.Add(new UnitInfo(3800, 1000));
