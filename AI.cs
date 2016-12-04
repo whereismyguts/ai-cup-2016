@@ -49,7 +49,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 SmartAttack(attackTarget);
 
                 moveTarget = CorrectByPotention(moveTarget);
-
+                
                 SmartWalk(moveTarget);
             }
             else {
@@ -59,10 +59,18 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         }
 
         static Vector CorrectByPotention(Vector goal) {
-            List<UnitInfo> nearBlocks = AllLivingUnits.Where(u => u.Distance <= Me.Radius * 1.3 + u.Radius).ToList();
+            List<UnitInfo> nearBlocks = AllLivingUnits.ToList();
+            
+            var creepSpawnCycleTick = World.TickIndex % Game.FactionMinionAppearanceIntervalTicks;
+            if(creepSpawnCycleTick > Game.FactionMinionAppearanceIntervalTicks - 100 &&
+                creepSpawnCycleTick < Game.FactionMinionAppearanceIntervalTicks)
+                nearBlocks.AddRange(UnitInfo.TheirSpawnPoints);
+
             if(nearBlocks.Count > 0) {
                 Vector newDir = (goal - UnitInfo.MyPosition).SetLength(50);
-                foreach(UnitInfo unit in nearBlocks) {
+                foreach(UnitInfo unit in nearBlocks) 
+                    if(unit.Distance<=Me.Radius*1.5+unit.Radius)
+                    {
                     Vector addForce = UnitInfo.MyPosition - unit.Position;
                     newDir += addForce;
                 }
@@ -183,6 +191,10 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //return tree;
         }
         static Vector CalcMoveTarget() {
+            if(World.TickIndex < 1000 && UnitInfo.MyPosition.DistanceTo(UnitInfo.HomeBase) > 2000)
+                return UnitInfo.HomeBase;
+            
+
             switch(problem) {
                 case Problem.Attack:
                     return CalcOptimalLocalPoint(false);
@@ -293,11 +305,11 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             var other = blocks.Where(u => !u.IsEnemy);
 
             //double safeDistance = World.TickIndex > 1000 ? Me.CastRange * 0.3 : Me.CastRange;
-            double safeDistance = Me.CastRange * 0.3;
-            double maxDistance = Me.CastRange * 0.7;
+            double safeDistance = Me.CastRange * 0.4;
+            double maxDistance = Me.CastRange * 0.8;
 
-            double rMax = Me.VisionRange;
-            double rStep = Me.Radius*3;
+            double rMax = Me.Radius*4;
+            double rStep = Me.Radius;
             List<Vector> dots = new List<Vector>();
             for(double Rx = -rMax; Rx <= rMax; Rx += rStep)
                 for(double Ry = -rMax; Ry <= rMax; Ry += rStep) {
@@ -324,7 +336,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                     dots.Add(dot);
                 }
             if(dots.Count > 0) {
-                var runPoint = UnitInfo.HomeBase.DistanceTo(UnitInfo.MyPosition) > Me.CastRange ? PrevOnLane() : NextOnLane();
+                var runPoint = UnitInfo.HomeBase.DistanceTo(UnitInfo.MyPosition) > Me.CastRange*2 ? PrevOnLane() : NextOnLane();
                 dots = dots.OrderBy(d => d.DistanceTo(runPoint)).ToList();
                 return dots[0];
             }
@@ -471,7 +483,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
         public UnitInfo(int x, int y) {
             Position = new Vector(x, y);
             Distance = Position.DistanceTo(MyPosition);
-            Radius = 35;
+            Radius = 100;
             Type = UnitType.Minion;
             Life = 100;
         }
@@ -483,7 +495,7 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             //TheirBase = Me.Faction == Faction.Renegades ? new Vector(200, 3800) : new Vector(3800, 200);
             They = Me.Faction == Faction.Academy ? Faction.Renegades : Faction.Academy;
             HomeThrone = new UnitInfo( World.Buildings.FirstOrDefault(b=>b.Type == BuildingType.FactionBase && b.Faction == Me.Faction));
-            HomeBase = HomeThrone.Position;
+           // HomeBase = HomeThrone.Position;
             TheirSpawnPoints = new List<UnitInfo>();
 
             if(HomeThrone.Position.X < 2000) {
