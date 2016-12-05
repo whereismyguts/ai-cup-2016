@@ -48,16 +48,27 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
                 }
             }
         }
+
+        static Vector prevPosition = new Vector();
+        static int stuckCount = 0;
         static void ProcessTargets() {
+
+            if(prevPosition == UnitInfo.MyPosition) {
+                stuckCount++;
+            }
+            else
+                stuckCount = 0;
+            prevPosition = UnitInfo.MyPosition;
+
+            if(stuckCount > 50)
+                SmartWalk(UnitInfo.MyPosition-(moveTarget-UnitInfo.MyPosition));
+
             if(attackTarget != null) {
                 SmartAttack(attackTarget);
-
                 moveTarget = CorrectByPotention(moveTarget);
-
                 SmartWalk(moveTarget);
             }
             else {
-
                 GoSimple(moveTarget);
             }
         }

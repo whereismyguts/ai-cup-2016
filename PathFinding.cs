@@ -250,6 +250,12 @@ namespace Com.CodeGame.CodeWizards2016.DevKit.CSharpCgdk {
             return new Point((int)X, (int)Y);
         }
 
+        public static bool operator !=(Vector c1, Vector c2) {
+            return !(c1 == c2);
+        }
+        public static bool operator ==(Vector c1, Vector c2) {
+            return Math.Round(c1.X, 5) == Math.Round(c2.X, 5) && Math.Round(c1.Y, 5) == Math.Round(c2.Y, 5);
+        }
         public static Vector operator /(Vector c1, double f) {
             return new Vector(c1.X / f, c1.Y / f);
         }
